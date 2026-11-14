@@ -13,23 +13,31 @@ router.get(
   '/review',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const due = await all(
-      `SELECT * FROM problems
-        WHERE ${DUE_WHERE} AND next_review_on <= CURDATE()
-        ORDER BY next_review_on ASC, recurrence_count DESC, mastery ASC
-        LIMIT 1`
-    );
+    const [due, remaining, todayCount] = await Promise.all([
+      all(
+        `SELECT * FROM problems
+          WHERE ${DUE_WHERE} AND next_review_on <= CURDATE()
+          ORDER BY next_review_on ASC, recurrence_count DESC, mastery ASC
+          LIMIT 1`
+      ),
+      get(`SELECT COUNT(*) AS c FROM problems WHERE ${DUE_WHERE} AND next_review_on <= CURDATE()`),
+      get(`SELECT COUNT(*) AS c FROM reviews WHERE DATE(reviewed_at) = CURDATE()`),
+    ]);
 
-    const remaining = await get(
-      `SELECT COUNT(*) AS c FROM problems WHERE ${DUE_WHERE} AND next_review_on <= CURDATE()`
-    );
+    const reviewedToday = Number(todayCount.c) || 0;
+    const cap = 5;
+    const pushed = req.query.more === '1';
+    const capReached = !pushed && reviewedToday >= cap && due.length > 0;
 
-    const problem = due[0] || null;
+    const problem = capReached ? null : due[0] || null;
 
     return res.render('review', {
       title: '复盘',
       problem,
       remaining: Number(remaining.c) || 0,
+      reviewedToday,
+      cap,
+      capReached,
       overdueDays: problem ? daysUntil(problem.next_review_on) : null,
     });
   })

@@ -4,7 +4,8 @@
   <h1>记一个问题</h1>
   <p class="hint">现在只需要写清楚"卡在哪儿"。方案和三问，解决之后再补。</p>
 
-  <form class="stack-form" action="/problems?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data">
+  <form class="stack-form" action="/problems?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
+        data-busy data-paste-file>
     <div class="field">
       <label for="title">一句话问题 *</label>
       <input id="title" type="text" name="title" required maxlength="200" autofocus placeholder="例：Docker 构建时 npm ci 报 EACCES">
@@ -29,7 +30,8 @@
     <div class="field">
       <label for="shot">截图</label>
       <input id="shot" type="file" name="shot" accept="image/*">
-      <p class="hint">支持 JPG / PNG，单张不超过 8MB。先只记一句话，截图可以之后再补。</p>
+      <div class="shot-preview" data-file-preview></div>
+      <p class="hint">支持 JPG / PNG，单张不超过 8MB。也可以直接 Ctrl+V 粘贴截图。</p>
     </div>
 
     <div class="form-actions">

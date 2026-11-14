@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { all, get, asyncHandler } = require('../db');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -40,12 +41,20 @@ router.get(
       `SELECT COUNT(*) AS c FROM problems
         WHERE status IN ('solved','mastered') AND next_review_on <= CURDATE()`
     );
-    const drafts = await get(`SELECT COUNT(*) AS c FROM problems WHERE status = 'draft'`);
+    const draftTotal = await get(`SELECT COUNT(*) AS c FROM problems WHERE status = 'draft'`);
     const recent = await all(
       `SELECT id, title, status, mastery, recurrence_count, next_review_on, tags, created_at, updated_at
          FROM problems
         ORDER BY updated_at DESC
         LIMIT 8`
+    );
+    // 首页只露最新的几张，完整清单在 /drafts
+    const drafts = await all(
+      `SELECT id, title, tags, error_text, created_at
+         FROM problems
+        WHERE status = 'draft'
+        ORDER BY created_at DESC
+        LIMIT 4`
     );
     const month = await get(
       `SELECT COUNT(*) AS solved, COALESCE(SUM(source = 'self'), 0) AS self_solved
@@ -70,13 +79,30 @@ router.get(
     return res.render('home', {
       title: '今天',
       dueCount: Number(due.c) || 0,
-      draftCount: Number(drafts.c) || 0,
+      draftCount: Number(draftTotal.c) || 0,
       recent,
+      drafts,
       selfRate: solvedThisMonth ? Math.round((selfSolved / solvedThisMonth) * 100) : null,
       solvedThisMonth,
       avgRecurrence: avg.avg_recurrence === null ? 0 : Number(avg.avg_recurrence),
       weakTags: weakTags(reviewRows),
     });
+  })
+);
+
+router.get(
+  '/drafts',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const drafts = await all(
+      `SELECT id, title, error_text, context, tags, created_at
+         FROM problems
+        WHERE status = 'draft'
+        ORDER BY created_at DESC
+        LIMIT 100`
+    );
+
+    return res.render('drafts', { title: '待整理', drafts });
   })
 );
 

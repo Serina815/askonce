@@ -1,16 +1,29 @@
 <%- include('partials/head') %>
 
-<% if (!problem) { %>
+<% if (capReached) { %>
+  <section class="empty-page">
+    <p class="kicker">复盘</p>
+    <h1>今天已经复盘 <%= reviewedToday %> 张</h1>
+    <p class="hero-sub">够了。间隔重复靠的是每天一点，不是一次刷完——明天再来。队列里还剩 <%= remaining %> 张。</p>
+    <p>
+      <a class="btn" href="/">明天再说</a>
+      <a class="btn ghost" href="/review?more=1">再复习几张</a>
+    </p>
+  </section>
+<% } else if (!problem) { %>
   <section class="empty-page">
     <p class="kicker">复盘</p>
     <h1>今天没有要复盘的</h1>
     <p class="hero-sub">队列清空了。去记一个新的问题，或者先把"待整理"的卡补完三问。</p>
-    <p><a class="btn" href="/">回今天</a></p>
+    <p>
+      <a class="btn" href="/">回今天</a>
+      <a class="btn ghost" href="/drafts">去整理待整理</a>
+    </p>
   </section>
 <% } else { %>
   <section class="review">
     <div class="review-top">
-      <span class="kicker">还剩 <%= remaining %> 张</span>
+      <span class="kicker">还剩 <%= remaining %> 张<% if (reviewedToday) { %> · 今天已复盘 <%= reviewedToday %> 张<% } %></span>
       <a class="linkbtn" href="/">今天先不复习</a>
     </div>
 
@@ -55,7 +68,7 @@
       </div>
 
       <form class="review-form" id="review-form" action="/p/<%= problem.id %>/review?_csrf=<%= csrfToken %>" method="post" hidden>
-        <p class="hint">刚才自己想起来了吗？</p>
+        <p class="hint">刚才自己想起来了吗？<span class="kbd-hint">也可以按 <kbd>1</kbd> 记得住 · <kbd>2</kbd> 模糊 · <kbd>3</kbd> 忘了</span></p>
         <div class="review-buttons">
           <button class="btn good" name="result" value="good" type="submit">记得住</button>
           <button class="btn fuzzy" name="result" value="fuzzy" type="submit">有点模糊</button>

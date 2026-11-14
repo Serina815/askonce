@@ -11,6 +11,9 @@
   const RESULT = { effective: '有效', partial: '部分有效', failed: '无效', unknown: '未验证' };
   const s = STATUS[problem.status] || STATUS.draft;
   const tags = String(problem.tags || '').split(',').filter(Boolean);
+  const todayStr = typeof today !== 'undefined' ? String(today) : '';
+  const hasSolution = Boolean(String(problem.final_solution || problem.q_how || '').trim());
+  const isDue = Boolean(problem.next_review_on) && String(problem.next_review_on).slice(0, 10) <= todayStr;
 %>
 
 <% if (duplicates && duplicates.length) { %>
@@ -53,16 +56,7 @@
     </div>
 
     <div class="problem-actions">
-      <% if (problem.status === 'draft') { %>
-        <form action="/p/<%= problem.id %>/solve?_csrf=<%= csrfToken %>" method="post">
-          <button class="btn" type="submit">标记已解决</button>
-        </form>
-      <% } else { %>
-        <form action="/p/<%= problem.id %>/recur?_csrf=<%= csrfToken %>" method="post" data-confirm="记一次复发？掌握度会 -1，下次复盘提到今天。">
-          <button class="btn warn" type="submit">又遇到了</button>
-        </form>
-      <% } %>
-      <form action="/p/<%= problem.id %>/ai?_csrf=<%= csrfToken %>" method="post" data-confirm="让 AI 生成三问草稿？只会填充空的字段。">
+      <form action="/p/<%= problem.id %>/ai?_csrf=<%= csrfToken %>" method="post" data-confirm="让 AI 生成三问草稿？只会填充空的字段。" data-busy>
         <button class="btn ghost" type="submit" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>AI 补三问</button>
       </form>
       <a class="btn ghost" href="/p/<%= problem.id %>/edit">编辑</a>
@@ -71,6 +65,56 @@
       </form>
     </div>
   </header>
+
+  <% if (problem.status === 'archived') { %>
+    <section class="next-step next-quiet">
+      <p class="next-kicker">状态</p>
+      <div class="next-main">
+        <p class="next-title">已归档</p>
+        <p class="next-hint">这张卡不再进入复盘队列。想重新用，编辑后标记已解决即可。</p>
+      </div>
+    </section>
+  <% } else if (problem.status === 'draft' && !hasSolution) { %>
+    <section class="next-step">
+      <p class="next-kicker">下一步</p>
+      <div class="next-main">
+        <p class="next-title">还差一步：把三问补上</p>
+        <p class="next-hint">是什么 / 怎么解 / 为什么。AI 可以给草稿，但最后要用自己的话改一遍。</p>
+      </div>
+      <a class="btn" href="/p/<%= problem.id %>/edit">去补三问</a>
+    </section>
+  <% } else if (problem.status === 'draft') { %>
+    <section class="next-step">
+      <p class="next-kicker">下一步</p>
+      <div class="next-main">
+        <p class="next-title">方案有了，可以标记解决</p>
+        <p class="next-hint">标记后进入复盘队列，明天第一次复盘——解决不是终点。</p>
+      </div>
+      <form action="/p/<%= problem.id %>/solve?_csrf=<%= csrfToken %>" method="post" data-busy>
+        <button class="btn" type="submit">标记已解决</button>
+      </form>
+    </section>
+  <% } else if (isDue) { %>
+    <section class="next-step">
+      <p class="next-kicker">下一步</p>
+      <div class="next-main">
+        <p class="next-title">今天该复盘这张</p>
+        <p class="next-hint">先别翻答案，自己想 30 秒，再点「看答案」自评。</p>
+      </div>
+      <a class="btn" href="/review">去复盘</a>
+    </section>
+  <% } else { %>
+    <section class="next-step next-quiet">
+      <p class="next-kicker">状态</p>
+      <div class="next-main">
+        <p class="next-title"><%= problem.status === 'mastered' ? '已掌握' : '等待下次复盘' %></p>
+        <p class="next-hint">下次复盘：<%= problem.next_review_on || '—' %></p>
+      </div>
+      <form action="/p/<%= problem.id %>/recur?_csrf=<%= csrfToken %>" method="post" data-confirm="记一次复发？掌握度会 -1，下次复盘提到今天。" data-busy>
+        <button class="btn ghost" type="submit">又遇到了</button>
+      </form>
+    </section>
+  <% } %>
 
   <% if (problem.error_text) { %>
     <section class="block">
@@ -156,13 +200,26 @@
             </form>
           </div>
           <pre class="solution"><%= a.solution %></pre>
+          <% if (attemptShots[a.id] && attemptShots[a.id].length) { %>
+            <div class="attempt-shots">
+              <% attemptShots[a.id].forEach(function (shot) { %>
+                <a href="<%= shot.path %>" target="_blank" rel="noopener">
+                  <img src="<%= shot.path %>" alt="这条尝试的截图" loading="lazy">
+                </a>
+              <% }) %>
+            </div>
+          <% } %>
         </li>
       <% }) %>
     </ol>
 
     <details class="add-attempt">
       <summary>＋ 加一条尝试</summary>
-      <form action="/p/<%= problem.id %>/attempts?_csrf=<%= csrfToken %>" method="post">
+      <form action="/p/<%= problem.id %>/attempts?_csrf=<%= csrfToken %>" method="post"
+            data-busy
+            data-paste-upload="/p/<%= problem.id %>/artifacts/upload"
+            data-artifact-base="/p/<%= problem.id %>/artifacts">
+        <input type="hidden" name="artifact_ids" value="">
         <div class="row">
           <select name="source" aria-label="来源">
             <option value="ai">AI 给的</option>
@@ -179,7 +236,13 @@
           </select>
         </div>
         <textarea name="solution" rows="4" required placeholder="把方案贴进来。无效的方案也要记——它会告诉你 AI 在哪儿不靠谱。"></textarea>
-        <button class="btn" type="submit">保存尝试</button>
+        <div class="paste-strip" data-paste-strip>
+          <span class="paste-tip">Ctrl+V 可直接粘贴截图</span>
+        </div>
+        <div class="form-foot">
+          <button class="btn" type="submit">保存尝试</button>
+          <span class="hint">截图会跟着这条尝试一起保存</span>
+        </div>
       </form>
     </details>
   </section>

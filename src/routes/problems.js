@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+const fs = require('fs/promises');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 
@@ -8,6 +10,7 @@ const { requireAuth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { saveShot } = require('../services/shot');
 const { normalizeError } = require('../services/text');
+const config = require('../config');
 const { generateDraft } = require('../services/ai');
 const { nextReviewDate } = require('../services/review');
 const { findDuplicates } = require('../services/duplicate');
@@ -79,12 +82,24 @@ router.get(
     const problem = await loadProblem(id);
     if (!problem) return next();
 
-    const [attempts, artifacts, recurrences, reviews] = await Promise.all([
+    const [attempts, artifacts, recurrences, reviews, clock] = await Promise.all([
       all('SELECT * FROM attempts WHERE problem_id = ? ORDER BY created_at ASC', [id]),
       all("SELECT * FROM artifacts WHERE problem_id = ? ORDER BY kind = 'image' DESC, created_at ASC", [id]),
       all('SELECT * FROM recurrences WHERE problem_id = ? ORDER BY occurred_at DESC LIMIT 20', [id]),
       all('SELECT * FROM reviews WHERE problem_id = ? ORDER BY reviewed_at DESC LIMIT 20', [id]),
+      get('SELECT CURDATE() AS today'),
     ]);
+
+    // 跟着某条尝试一起贴的图，渲染在那条尝试下面；其余归整张卡
+    const attemptShots = {};
+    const cardArtifacts = [];
+    for (const art of artifacts) {
+      if (art.attempt_id) {
+        (attemptShots[art.attempt_id] = attemptShots[art.attempt_id] || []).push(art);
+      } else {
+        cardArtifacts.push(art);
+      }
+    }
 
     // "你以前记过"的候选只在创建后的那一屏出现一次，之后不再打扰
     const hint = req.session.dupHint;
@@ -95,7 +110,9 @@ router.get(
       title: problem.title,
       problem,
       attempts,
-      artifacts,
+      artifacts: cardArtifacts,
+      attemptShots,
+      today: clock ? clock.today : '',
       recurrences,
       reviews,
       duplicates,
@@ -310,10 +327,23 @@ router.post(
     const source = ATTEMPT_SOURCES.includes(req.body.source) ? req.body.source : 'ai';
     const result = RESULTS.includes(req.body.result) ? req.body.result : 'unknown';
 
-    await run(
+    const inserted = await run(
       `INSERT INTO attempts (problem_id, source, tool, solution, result) VALUES (?,?,?,?,?)`,
       [id, source, str(req.body.tool, 64), solution, result]
     );
+
+    // 粘贴时已经入库的截图，在这里挂到这条尝试上
+    const ids = String(req.body.artifact_ids || '')
+      .split(',')
+      .map((x) => Number.parseInt(x, 10))
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .slice(0, 20);
+    if (ids.length) {
+      await run(
+        `UPDATE artifacts SET attempt_id = ? WHERE problem_id = ? AND id IN (${ids.map(() => '?').join(',')})`,
+        [inserted.insertId, id, ...ids]
+      );
+    }
 
     // 第一次拿到"有效"方案时，顺手写成最终方案（之后可在编辑页改）
     if (result === 'effective' && !String(problem.final_solution || '').trim()) {
@@ -359,6 +389,59 @@ router.post(
 
     req.session.flash = { type: 'ok', text: '链接已添加' };
     return res.redirect(`/p/${id}`);
+  })
+);
+
+const singleShot = upload.single('shot');
+
+/**
+ * 粘贴即上传：前端拿到 path 先显示缩略图，保存表单时再把 id 挂到那条尝试上。
+ * 单独上传的好处是任何一个输入框都能贴，不必给每个表单都加 multipart。
+ */
+router.post(
+  '/p/:id/artifacts/upload',
+  requireAuth,
+  (req, res, next) => {
+    singleShot(req, res, (err) => {
+      if (!err) return next();
+      const message = err.code === 'LIMIT_FILE_SIZE' ? '截图太大了（上限 8MB）' : err.message || '上传失败';
+      return res.status(400).json({ ok: false, error: message });
+    });
+  },
+  asyncHandler(async (req, res, next) => {
+    const id = toInt(req.params.id);
+    const problem = await loadProblem(id);
+    if (!problem) return res.status(404).json({ ok: false, error: '卡片不存在' });
+    if (!req.file) return res.status(400).json({ ok: false, error: '没有收到图片' });
+
+    const shot = await saveShot(req.file.buffer, id);
+    const inserted = await run(
+      `INSERT INTO artifacts (problem_id, kind, path, note) VALUES (?, 'image', ?, ?)`,
+      [id, shot.path, str(req.body.note, 60) || '粘贴']
+    );
+
+    return res.json({ ok: true, id: inserted.insertId, path: shot.path });
+  })
+);
+
+/** 缩略图上的 × ：删记录 + 删文件 */
+router.delete(
+  '/p/:id/artifacts/:aid',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = toInt(req.params.id);
+    const aid = toInt(req.params.aid);
+    const artifact = await get('SELECT * FROM artifacts WHERE id = ? AND problem_id = ?', [aid, id]);
+    if (!artifact) return res.status(404).json({ ok: false, error: '附件不存在' });
+
+    await run('DELETE FROM artifacts WHERE id = ?', [aid]);
+
+    if (artifact.path && artifact.path.startsWith('/uploads/shots/')) {
+      const file = path.join(config.uploadDir, path.basename(artifact.path));
+      await fs.unlink(file).catch(() => {});
+    }
+
+    return res.json({ ok: true });
   })
 );
 

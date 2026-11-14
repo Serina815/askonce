@@ -3,7 +3,11 @@
 <section class="form-page">
   <h1>编辑这张卡</h1>
 
-  <form class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data">
+  <form class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
+        data-busy
+        data-paste-upload="/p/<%= problem.id %>/artifacts/upload"
+        data-artifact-base="/p/<%= problem.id %>/artifacts">
+    <input type="hidden" name="artifact_ids" value="">
     <div class="field">
       <label for="title">一句话问题 *</label>
       <input id="title" type="text" name="title" required maxlength="200" value="<%= problem.title %>">
@@ -68,6 +72,10 @@
         <label for="shot">补充截图</label>
         <input id="shot" type="file" name="shot" accept="image/*">
       </div>
+    </div>
+
+    <div class="paste-strip" data-paste-strip>
+      <span class="paste-tip">任何输入框里都可以 Ctrl+V 粘贴截图，会加到这张卡</span>
     </div>
 
     <div class="form-actions">

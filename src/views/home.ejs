@@ -21,8 +21,10 @@
   <div class="hero-actions">
     <% if (dueCount) { %>
       <a class="btn big" href="/review">开始复盘 →</a>
+    <% } else if (draftCount) { %>
+      <a class="btn big ghost" href="/drafts">去整理 <%= draftCount %> 张 →</a>
     <% } else { %>
-      <span class="btn big disabled">今天没有要复盘的</span>
+      <a class="btn big ghost" href="/new">记一个问题</a>
     <% } %>
   </div>
 </section>
@@ -42,10 +44,34 @@
   </div>
 </section>
 
+<% if (drafts.length) { %>
+<section class="panel">
+  <div class="panel-head">
+    <h2>待整理 <span class="count"><%= draftCount %></span></h2>
+    <a class="linkbtn" href="/drafts">全部 →</a>
+  </div>
+  <ul class="cards">
+    <% drafts.forEach(function (p) { %>
+      <li class="card card-draft">
+        <a class="card-main" href="/p/<%= p.id %>/edit">
+          <span class="card-title"><%= p.title %></span>
+          <span class="card-meta">
+            <span class="chip draft">待整理</span>
+            <% if (p.tags) { %><span class="card-tags"><%= p.tags.split(',').join(' · ') %></span><% } %>
+            <span class="card-date">记于 <%= String(p.created_at).slice(0, 10) %></span>
+          </span>
+        </a>
+        <span class="card-side"><span class="card-cta">补三问 →</span></span>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>
+
 <section class="panel">
   <div class="panel-head">
     <h2>最近的卡</h2>
-    <a class="linkbtn" href="/new">手动新建</a>
+    <a class="linkbtn" href="/new">记一个</a>
   </div>
 
   <% if (!recent.length) { %>

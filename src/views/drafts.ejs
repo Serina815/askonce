@@ -1,0 +1,38 @@
+<%- include('partials/head') %>
+
+<section class="hero small">
+  <p class="kicker">待整理</p>
+  <h1><%= drafts.length %> 张等着补三问</h1>
+  <p class="hero-sub">记录只是入口。补上「是什么 / 怎么解 / 为什么」，它才会变成能复习的卡。</p>
+</section>
+
+<% if (!drafts.length) { %>
+  <section class="empty-page">
+    <p class="empty">没有待整理的卡。要么你整理得很勤，要么最近没怎么记。</p>
+    <p><a class="btn" href="/">回今天</a></p>
+  </section>
+<% } else { %>
+  <ul class="cards">
+    <% drafts.forEach(function (p) { %>
+      <li class="card card-draft">
+        <a class="card-main" href="/p/<%= p.id %>">
+          <span class="card-title"><%= p.title %></span>
+          <span class="card-meta">
+            <% if (p.tags) { %><span class="card-tags"><%= p.tags.split(',').join(' · ') %></span><% } %>
+            <span class="card-date">记于 <%= String(p.created_at).slice(0, 10) %></span>
+          </span>
+          <% if (p.error_text) { %>
+            <span class="card-excerpt"><%= String(p.error_text).split('\n')[0].slice(0, 100) %></span>
+          <% } %>
+        </a>
+        <span class="card-side">
+          <a class="btn ghost" href="/p/<%= p.id %>/edit">补三问</a>
+        </span>
+      </li>
+    <% }) %>
+  </ul>
+
+  <p class="hint" style="margin-top: 18px;">补完三问、写下最终方案，就可以「标记已解决」进复盘队列。</p>
+<% } %>
+
+<%- include('partials/foot') %>
