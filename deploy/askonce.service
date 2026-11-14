@@ -1,0 +1,34 @@
+[Unit]
+Description=AskOnce
+Documentation=http://你的公网IP
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=askonce
+Group=askonce
+WorkingDirectory=/var/www/askonce
+EnvironmentFile=/etc/askonce/askonce.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+ReadWritePaths=/var/www/askonce/public/uploads
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

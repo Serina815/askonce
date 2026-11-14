@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+
+# 运行期生成
+public/uploads/shots/*
+!public/uploads/shots/.gitkeep
+
+.DS_Store
+Thumbs.db

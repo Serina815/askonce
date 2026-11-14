@@ -1,0 +1,90 @@
+<%- include('partials/head') %>
+
+<%
+  const maxWeek = Math.max(1, ...weeks.map(function (w) { return w.count; }));
+%>
+
+<section class="hero small">
+  <p class="kicker">统计</p>
+  <h1>你在变强吗</h1>
+  <p class="hero-sub">自主解决率、复发次数、薄弱标签 —— 三个能说谎最少的数字。</p>
+</section>
+
+<section class="metrics four">
+  <div class="metric">
+    <span class="metric-num"><%= selfRate === null ? '—' : selfRate + '%' %></span>
+    <span class="metric-label">自主解决率</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num"><%= total %></span>
+    <span class="metric-label">已解决 / 已掌握</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num"><%= avgRecurrence %></span>
+    <span class="metric-label">平均复发次数</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num"><%= counts.draft %></span>
+    <span class="metric-label">待整理</span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>复发次数（近 8 周）</h2><span class="hint">越往右越少，是好事</span></div>
+  <div class="bars">
+    <% weeks.forEach(function (w) { %>
+      <div class="bar-item">
+        <div class="bar" style="height: <%= Math.round((w.count / maxWeek) * 100) %>%" title="<%= w.label %> 起的那周：<%= w.count %> 次"></div>
+        <span class="bar-label"><%= w.label %></span>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<% if (weakTags.length) { %>
+  <section class="panel">
+    <div class="panel-head"><h2>薄弱标签</h2><span class="hint">近 90 天复盘失败率</span></div>
+    <ul class="weak">
+      <% weakTags.forEach(function (t) { %>
+        <li>
+          <a href="/search?q=<%= encodeURIComponent(t.tag) %>">#<%= t.tag %></a>
+          <span class="weak-bar"><i style="width: <%= t.rate %>%"></i></span>
+          <span class="weak-num"><%= t.rate %>%<span class="muted"> / <%= t.total %> 次</span></span>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+<% } %>
+
+<% if (topRecurring.length) { %>
+  <section class="panel">
+    <div class="panel-head"><h2>复发最多的卡</h2><span class="hint">优先攻克它们</span></div>
+    <ul class="cards">
+      <% topRecurring.forEach(function (p) { %>
+        <li class="card">
+          <a class="card-main" href="/p/<%= p.id %>">
+            <span class="card-title"><%= p.title %></span>
+            <span class="card-meta"><span class="chip recur">复发 <%= p.recurrence_count %> 次</span></span>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+<% } %>
+
+<% if (recentReviews.length) { %>
+  <section class="panel">
+    <div class="panel-head"><h2>最近复盘</h2></div>
+    <ul class="history">
+      <% recentReviews.forEach(function (r) { %>
+        <li>
+          <span class="chip"><%= r.result === 'good' ? '记得住' : r.result === 'fuzzy' ? '有点模糊' : '忘了' %></span>
+          <a href="/p/<%= r.id %>"><%= r.title %></a>
+          <span class="muted"><%= String(r.reviewed_at).slice(0, 10) %></span>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+<% } %>
+
+<%- include('partials/foot') %>

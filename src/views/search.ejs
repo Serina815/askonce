@@ -1,0 +1,44 @@
+<%- include('partials/head') %>
+
+<%
+  const STATUS = {
+    draft: { text: '待整理', cls: 'draft' },
+    solved: { text: '待复盘', cls: 'solved' },
+    mastered: { text: '已掌握', cls: 'mastered' },
+    archived: { text: '已归档', cls: 'archived' },
+  };
+%>
+
+<section class="hero small">
+  <p class="kicker">搜索</p>
+  <h1><%= q ? '“' + q + '”' : '搜一张卡' %></h1>
+  <p class="hero-sub">按报错原文找最准 —— 再踩同一个坑时，你手上只有一段报错。</p>
+</section>
+
+<form class="search-form" action="/search" method="get">
+  <input type="search" name="q" value="<%= q %>" placeholder="粘贴报错片段，或输入关键词" autofocus>
+  <button class="btn" type="submit">搜索</button>
+</form>
+
+<% if (q && !problems.length) { %>
+  <p class="empty">没有匹配的卡。也许是第一次遇到——按 <kbd>N</kbd> 记下来。</p>
+<% } %>
+
+<% if (problems.length) { %>
+  <ul class="cards">
+    <% problems.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
+      <li class="card">
+        <a class="card-main" href="/p/<%= p.id %>">
+          <span class="card-title"><%= p.title %></span>
+          <span class="card-meta">
+            <span class="chip <%= s.cls %>"><%= s.text %></span>
+            <% if (p.recurrence_count > 0) { %><span class="chip recur">复发 <%= p.recurrence_count %></span><% } %>
+            <% if (p.tags) { %><span class="card-tags"><%= p.tags.split(',').join(' · ') %></span><% } %>
+          </span>
+        </a>
+      </li>
+    <% }) %>
+  </ul>
+<% } %>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,34 @@
+</main>
+
+<footer class="footer">
+  <span>只问一次 · 同一个问题，不问第二遍</span>
+  <span>记录 → 复盘 → 复发 → 掌握</span>
+</footer>
+
+<% if (currentUser) { %>
+<div class="capture" id="capture" hidden>
+  <div class="capture-back" data-close-capture></div>
+  <form class="capture-panel" action="/problems?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data">
+    <div class="capture-head">
+      <h2>记一个问题</h2>
+      <button type="button" class="linkbtn" data-close-capture>关闭 Esc</button>
+    </div>
+    <input class="capture-title" type="text" name="title" id="capture-title" placeholder="一句话：卡在哪儿？" required maxlength="200" autocomplete="off">
+    <textarea name="error_text" rows="4" placeholder="把报错原文粘进来（Ctrl+V 可以直接贴截图）"></textarea>
+    <div class="capture-row">
+      <input type="text" name="tags" placeholder="标签，逗号分隔：nginx,权限" maxlength="255">
+    </div>
+    <input type="file" name="shot" id="capture-shot" accept="image/*" class="hidden-file">
+    <div class="shot-preview" id="shot-preview"></div>
+    <div class="capture-actions">
+      <span class="hint">先记下来，方案和「为什么」之后补。</span>
+      <span class="hint">Ctrl/⌘ + Enter 保存</span>
+      <button type="submit" class="btn">保存</button>
+    </div>
+  </form>
+</div>
+<% } %>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

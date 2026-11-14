@@ -1,0 +1,74 @@
+<%- include('partials/head') %>
+
+<% if (!problem) { %>
+  <section class="empty-page">
+    <p class="kicker">复盘</p>
+    <h1>今天没有要复盘的</h1>
+    <p class="hero-sub">队列清空了。去记一个新的问题，或者先把"待整理"的卡补完三问。</p>
+    <p><a class="btn" href="/">回今天</a></p>
+  </section>
+<% } else { %>
+  <section class="review">
+    <div class="review-top">
+      <span class="kicker">还剩 <%= remaining %> 张</span>
+      <a class="linkbtn" href="/">今天先不复习</a>
+    </div>
+
+    <article class="review-card">
+      <h1><%= problem.title %></h1>
+
+      <p class="review-meta">
+        <% String(problem.tags || '').split(',').filter(Boolean).forEach(function (t) { %>
+          <span class="tag">#<%= t %></span>
+        <% }) %>
+        <% if (problem.recurrence_count > 0) { %><span class="chip recur">复发 <%= problem.recurrence_count %> 次</span><% } %>
+      </p>
+
+      <% if (problem.error_text) { %>
+        <pre class="code review-code"><%= problem.error_text %></pre>
+      <% } %>
+
+      <p class="review-prompt">先别急着看答案，自己想 30 秒：如果再遇到，你会怎么下手？</p>
+
+      <button type="button" class="btn big" data-reveal>看答案</button>
+
+      <div class="review-answer" id="review-answer" hidden>
+        <div class="qa">
+          <div class="qa-item">
+            <h3>是什么</h3>
+            <p><%= problem.q_what || '（没写）' %></p>
+          </div>
+          <div class="qa-item">
+            <h3>怎么解</h3>
+            <p class="pre-wrap"><%= problem.q_how || '（没写）' %></p>
+          </div>
+          <div class="qa-item">
+            <h3>为什么</h3>
+            <p class="pre-wrap"><%= problem.q_why || '（没写）' %></p>
+          </div>
+        </div>
+
+        <% if (problem.final_solution) { %>
+          <h3 class="answer-title">最终方案</h3>
+          <pre class="code"><%= problem.final_solution %></pre>
+        <% } %>
+      </div>
+
+      <form class="review-form" id="review-form" action="/p/<%= problem.id %>/review?_csrf=<%= csrfToken %>" method="post" hidden>
+        <p class="hint">刚才自己想起来了吗？</p>
+        <div class="review-buttons">
+          <button class="btn good" name="result" value="good" type="submit">记得住</button>
+          <button class="btn fuzzy" name="result" value="fuzzy" type="submit">有点模糊</button>
+          <button class="btn bad" name="result" value="bad" type="submit">完全忘了</button>
+        </div>
+      </form>
+
+      <p class="hint review-links">
+        <a href="/p/<%= problem.id %>">打开详情</a> ·
+        下次复盘：<%= problem.next_review_on || '—' %>
+      </p>
+    </article>
+  </section>
+<% } %>
+
+<%- include('partials/foot') %>

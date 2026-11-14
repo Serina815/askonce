@@ -1,0 +1,6 @@
+# 统一用 LF：服务端是 Linux，避免 Windows 编辑器带入 CRLF 把 .sh / systemd 文件弄坏
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

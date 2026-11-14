@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= typeof title !== 'undefined' && title ? title + ' · 只问一次' : '只问一次' %></title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">只问一次<span class="dot">.</span></a>
+  <nav class="nav">
+    <a href="/" class="<%= currentPath === '/' ? 'on' : '' %>">今天</a>
+    <a href="/search" class="<%= currentPath === '/search' ? 'on' : '' %>">搜索</a>
+    <a href="/stats" class="<%= currentPath === '/stats' ? 'on' : '' %>">统计</a>
+    <a href="/export" class="<%= currentPath === '/export' ? 'on' : '' %>">导出</a>
+  </nav>
+  <% if (currentUser) { %>
+    <button type="button" class="btn capture-open" data-open-capture>记一个 <kbd>N</kbd></button>
+    <form action="/logout?_csrf=<%= csrfToken %>" method="post" class="inline-form">
+      <button type="submit" class="linkbtn">退出</button>
+    </form>
+  <% } else { %>
+    <a class="btn ghost" href="/login">登录</a>
+  <% } %>
+</header>
+
+<% if (flash) { %>
+  <div class="flash flash-<%= flash.type %>" role="status"><%= flash.text %></div>
+<% } %>
+
+<main class="main">

@@ -1,0 +1,80 @@
+<%- include('partials/head') %>
+
+<section class="form-page">
+  <h1>编辑这张卡</h1>
+
+  <form class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data">
+    <div class="field">
+      <label for="title">一句话问题 *</label>
+      <input id="title" type="text" name="title" required maxlength="200" value="<%= problem.title %>">
+    </div>
+
+    <div class="field">
+      <label for="error_text">报错原文</label>
+      <textarea id="error_text" name="error_text" rows="6"><%= problem.error_text || '' %></textarea>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="context">场景 / 环境</label>
+        <input id="context" type="text" name="context" maxlength="500" value="<%= problem.context || '' %>">
+      </div>
+      <div class="field">
+        <label for="tags">标签</label>
+        <input id="tags" type="text" name="tags" maxlength="255" value="<%= problem.tags %>">
+      </div>
+    </div>
+
+    <h2 class="form-section">三问</h2>
+
+    <div class="field">
+      <label for="q_what">是什么（现象 + 根因，一句话）</label>
+      <textarea id="q_what" name="q_what" rows="2"><%= problem.q_what || '' %></textarea>
+    </div>
+
+    <div class="field">
+      <label for="q_how">怎么解（可执行步骤）</label>
+      <textarea id="q_how" name="q_how" rows="4"><%= problem.q_how || '' %></textarea>
+    </div>
+
+    <div class="field">
+      <label for="q_why">为什么（原理 / 权衡）</label>
+      <textarea id="q_why" name="q_why" rows="4"><%= problem.q_why || '' %></textarea>
+    </div>
+
+    <div class="field">
+      <label for="q_plain">人话版（讲给完全不懂的人）</label>
+      <textarea id="q_plain" name="q_plain" rows="2"><%= problem.q_plain || '' %></textarea>
+    </div>
+
+    <h2 class="form-section">结论</h2>
+
+    <div class="field">
+      <label for="final_solution">最终方案（照做就行的那版）</label>
+      <textarea id="final_solution" name="final_solution" rows="6"><%= problem.final_solution || '' %></textarea>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="source">这次是怎么解决的</label>
+        <select id="source" name="source">
+          <option value="">未标注</option>
+          <% [['self', '我自己想的'], ['ai', 'AI 给的'], ['doc', '查文档'], ['mixed', '混合']].forEach(function (item) { %>
+            <option value="<%= item[0] %>" <%= problem.source === item[0] ? 'selected' : '' %>><%= item[1] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="shot">补充截图</label>
+        <input id="shot" type="file" name="shot" accept="image/*">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">保存</button>
+      <a class="btn ghost" href="/p/<%= problem.id %>">取消</a>
+    </div>
+  </form>
+</section>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,44 @@
+<%- include('partials/head') %>
+
+<section class="hero small">
+  <p class="kicker">导出</p>
+  <h1>数据在你手里</h1>
+  <p class="hero-sub">共 <%= total %> 张卡 · 待整理 <%= counts.draft %> · 待复盘 <%= counts.solved %> · 已掌握 <%= counts.mastered %></p>
+</section>
+
+<section class="panel">
+  <h2>导出</h2>
+  <div class="export-grid">
+    <a class="export-card" href="/export.md">
+      <strong>Markdown</strong>
+      <span>一张卡一节，丢进 Obsidian / 语雀</span>
+    </a>
+    <a class="export-card" href="/export.csv">
+      <strong>Anki CSV</strong>
+      <span>正面问题、背面三问，直接导入间隔重复</span>
+    </a>
+    <a class="export-card" href="/export.json">
+      <strong>JSON</strong>
+      <span>全量备份，换机器时导回去</span>
+    </a>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>AI</h2>
+  <p>
+    状态：<%= aiEnabled ? '已启用' : '未配置' %>
+    <% if (aiEnabled) { %>· 模型 <code><%= aiModel %></code><% } %>
+  </p>
+  <p class="hint">
+    AI 只做一件事：把「问题 + 报错」变成三问的草稿，并且<strong>只填空字段</strong>，不覆盖你写的。
+    接口是 OpenAI 兼容格式，换供应商只改 <code>AI_BASE_URL</code> 和 <code>AI_MODEL</code>。
+  </p>
+</section>
+
+<section class="panel">
+  <h2>运行环境</h2>
+  <p class="hint">Node <%= nodeVersion %> · 部署后如果这里显示的是生产值，说明 systemd 环境变量注入正常。</p>
+</section>
+
+<%- include('partials/foot') %>

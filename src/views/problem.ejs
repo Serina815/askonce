@@ -1,0 +1,221 @@
+<%- include('partials/head') %>
+
+<%
+  const STATUS = {
+    draft: { text: '待整理', cls: 'draft' },
+    solved: { text: '待复盘', cls: 'solved' },
+    mastered: { text: '已掌握', cls: 'mastered' },
+    archived: { text: '已归档', cls: 'archived' },
+  };
+  const SOURCE = { ai: 'AI', doc: '文档', self: '自己', other: '其他' };
+  const RESULT = { effective: '有效', partial: '部分有效', failed: '无效', unknown: '未验证' };
+  const s = STATUS[problem.status] || STATUS.draft;
+  const tags = String(problem.tags || '').split(',').filter(Boolean);
+%>
+
+<article class="problem">
+  <header class="problem-head">
+    <div class="problem-title">
+      <div class="problem-chips">
+        <span class="chip <%= s.cls %>"><%= s.text %></span>
+        <% if (problem.recurrence_count > 0) { %>
+          <span class="chip recur">复发 <%= problem.recurrence_count %> 次</span>
+        <% } %>
+        <span class="dots" title="掌握度"><i class="<%= problem.mastery >= 1 ? 'on' : '' %>"></i><i class="<%= problem.mastery >= 2 ? 'on' : '' %>"></i><i class="<%= problem.mastery >= 3 ? 'on' : '' %>"></i></span>
+      </div>
+      <h1><%= problem.title %></h1>
+      <p class="problem-meta">
+        <% tags.forEach(function (t) { %>
+          <a class="tag" href="/search?q=<%= encodeURIComponent(t) %>">#<%= t %></a>
+        <% }) %>
+        <span class="muted">记录于 <%= String(problem.created_at).slice(0, 10) %></span>
+        <% if (problem.next_review_on) { %><span class="muted">· 下次复盘 <%= problem.next_review_on %></span><% } %>
+      </p>
+    </div>
+
+    <div class="problem-actions">
+      <% if (problem.status === 'draft') { %>
+        <form action="/p/<%= problem.id %>/solve?_csrf=<%= csrfToken %>" method="post">
+          <button class="btn" type="submit">标记已解决</button>
+        </form>
+      <% } else { %>
+        <form action="/p/<%= problem.id %>/recur?_csrf=<%= csrfToken %>" method="post" data-confirm="记一次复发？掌握度会 -1，下次复盘提到今天。">
+          <button class="btn warn" type="submit">又遇到了</button>
+        </form>
+      <% } %>
+      <form action="/p/<%= problem.id %>/ai?_csrf=<%= csrfToken %>" method="post" data-confirm="让 AI 生成三问草稿？只会填充空的字段。">
+        <button class="btn ghost" type="submit" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>AI 补三问</button>
+      </form>
+      <a class="btn ghost" href="/p/<%= problem.id %>/edit">编辑</a>
+      <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
+        <button class="linkbtn danger" type="submit">删除</button>
+      </form>
+    </div>
+  </header>
+
+  <% if (problem.error_text) { %>
+    <section class="block">
+      <div class="block-head">
+        <h2>报错原文</h2>
+        <button type="button" class="linkbtn" data-copy="error-text">复制</button>
+      </div>
+      <pre class="code" id="error-text"><%= problem.error_text %></pre>
+    </section>
+  <% } %>
+
+  <% if (problem.context) { %>
+    <section class="block">
+      <h2>场景</h2>
+      <p class="prose"><%= problem.context %></p>
+    </section>
+  <% } %>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>三问</h2>
+      <a class="linkbtn" href="/p/<%= problem.id %>/edit">修改</a>
+    </div>
+
+    <% if (!problem.q_what && !problem.q_how && !problem.q_why && !problem.q_plain) { %>
+      <p class="empty">
+        还没写。可以自己用三句话想清楚，也可以点上面的「AI 补三问」先拿草稿——
+        但最后一定要改写成你自己的话。
+      </p>
+    <% } else { %>
+      <div class="qa">
+        <div class="qa-item">
+          <h3>是什么</h3>
+          <p><%= problem.q_what || '—' %></p>
+        </div>
+        <div class="qa-item">
+          <h3>怎么解</h3>
+          <p class="pre-wrap"><%= problem.q_how || '—' %></p>
+        </div>
+        <div class="qa-item">
+          <h3>为什么</h3>
+          <p class="pre-wrap"><%= problem.q_why || '—' %></p>
+        </div>
+        <div class="qa-item qa-plain">
+          <h3>人话版</h3>
+          <p><%= problem.q_plain || '—' %></p>
+        </div>
+      </div>
+    <% } %>
+  </section>
+
+  <% if (problem.final_solution) { %>
+    <section class="block block-key">
+      <div class="block-head">
+        <h2>最终方案</h2>
+        <button type="button" class="linkbtn" data-copy="final-solution">复制</button>
+      </div>
+      <pre class="code" id="final-solution"><%= problem.final_solution %></pre>
+      <p class="hint">
+        解决方式：<%= problem.source === 'self' ? '自己想的' : problem.source === 'ai' ? 'AI 给的' : problem.source === 'doc' ? '查文档' : problem.source === 'mixed' ? '混合' : '未标注' %>
+      </p>
+    </section>
+  <% } %>
+
+  <section class="block" id="attempts">
+    <div class="block-head">
+      <h2>尝试记录 <span class="count"><%= attempts.length %></span></h2>
+    </div>
+
+    <% if (!attempts.length) { %>
+      <p class="empty">还没有尝试。把 AI 给的方案、文档里找到的做法都记下来，包括没用的那些。</p>
+    <% } %>
+
+    <ol class="timeline">
+      <% attempts.forEach(function (a) { %>
+        <li class="attempt result-<%= a.result %>">
+          <div class="attempt-head">
+            <span class="chip"><%= SOURCE[a.source] || a.source %><%= a.tool ? ' · ' + a.tool : '' %></span>
+            <span class="chip result"><%= RESULT[a.result] || a.result %></span>
+            <span class="muted"><%= String(a.created_at).slice(0, 10) %></span>
+            <form action="/attempts/<%= a.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这条尝试？">
+              <button class="linkbtn danger" type="submit">删</button>
+            </form>
+          </div>
+          <pre class="solution"><%= a.solution %></pre>
+        </li>
+      <% }) %>
+    </ol>
+
+    <details class="add-attempt">
+      <summary>＋ 加一条尝试</summary>
+      <form action="/p/<%= problem.id %>/attempts?_csrf=<%= csrfToken %>" method="post">
+        <div class="row">
+          <select name="source" aria-label="来源">
+            <option value="ai">AI 给的</option>
+            <option value="doc">文档 / 搜索</option>
+            <option value="self">我自己想的</option>
+            <option value="other">其他</option>
+          </select>
+          <input type="text" name="tool" placeholder="工具：ChatGPT / Claude / 官方文档" maxlength="64">
+          <select name="result" aria-label="结果">
+            <option value="effective">有效</option>
+            <option value="partial">部分有效</option>
+            <option value="failed">无效</option>
+            <option value="unknown">未验证</option>
+          </select>
+        </div>
+        <textarea name="solution" rows="4" required placeholder="把方案贴进来。无效的方案也要记——它会告诉你 AI 在哪儿不靠谱。"></textarea>
+        <button class="btn" type="submit">保存尝试</button>
+      </form>
+    </details>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>截图与链接 <span class="count"><%= artifacts.length %></span></h2>
+    </div>
+
+    <% if (artifacts.length) { %>
+      <div class="shots">
+        <% artifacts.forEach(function (a) { %>
+          <% if (a.kind === 'image') { %>
+            <a class="shot" href="<%= a.path %>" target="_blank" rel="noopener">
+              <img src="<%= a.path %>" alt="<%= a.note || '截图' %>" loading="lazy">
+            </a>
+          <% } else { %>
+            <a class="link-item" href="<%= a.url %>" target="_blank" rel="noopener noreferrer">
+              <span class="link-url"><%= a.url %></span>
+              <% if (a.note) { %><span class="muted"><%= a.note %></span><% } %>
+            </a>
+          <% } %>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <details class="add-attempt">
+      <summary>＋ 加一个链接</summary>
+      <form action="/p/<%= problem.id %>/artifacts?_csrf=<%= csrfToken %>" method="post">
+        <div class="row">
+          <input type="url" name="url" placeholder="https://…" required maxlength="1000">
+          <input type="text" name="note" placeholder="备注（可空）" maxlength="255">
+        </div>
+        <button class="btn" type="submit">添加</button>
+      </form>
+    </details>
+  </section>
+
+  <% if (recurrences.length || reviews.length) { %>
+    <section class="block">
+      <h2>历史</h2>
+      <ul class="history">
+        <% recurrences.forEach(function (r) { %>
+          <li><span class="chip recur">复发</span> <%= String(r.occurred_at).slice(0, 10) %><% if (r.note) { %> · <%= r.note %><% } %></li>
+        <% }) %>
+        <% reviews.forEach(function (r) { %>
+          <li>
+            <span class="chip">复盘</span>
+            <%= String(r.reviewed_at).slice(0, 10) %>
+            · <%= r.result === 'good' ? '记得住' : r.result === 'fuzzy' ? '有点模糊' : '忘了' %>
+          </li>
+        <% }) %>
+      </ul>
+    </section>
+  <% } %>
+</article>
+
+<%- include('partials/foot') %>

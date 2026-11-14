@@ -1,0 +1,90 @@
+<%- include('partials/head') %>
+
+<%
+  const STATUS = {
+    draft: { text: '待整理', cls: 'draft' },
+    solved: { text: '待复盘', cls: 'solved' },
+    mastered: { text: '已掌握', cls: 'mastered' },
+    archived: { text: '已归档', cls: 'archived' },
+  };
+%>
+
+<section class="hero">
+  <div class="hero-main">
+    <p class="kicker">今天</p>
+    <h1><%= dueCount %> 张该复盘</h1>
+    <p class="hero-sub">
+      <% if (draftCount) { %><%= draftCount %> 张待整理（补三问、标记解决）<% } else { %>没有待整理的卡<% } %>
+      · 自主解决率 <%= selfRate === null ? '—' : selfRate + '%' %>
+    </p>
+  </div>
+  <div class="hero-actions">
+    <% if (dueCount) { %>
+      <a class="btn big" href="/review">开始复盘 →</a>
+    <% } else { %>
+      <span class="btn big disabled">今天没有要复盘的</span>
+    <% } %>
+  </div>
+</section>
+
+<section class="metrics">
+  <div class="metric">
+    <span class="metric-num"><%= solvedThisMonth %></span>
+    <span class="metric-label">本月解决</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num"><%= selfRate === null ? '—' : selfRate + '%' %></span>
+    <span class="metric-label">自主解决率</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num"><%= avgRecurrence %></span>
+    <span class="metric-label">平均复发次数</span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>最近的卡</h2>
+    <a class="linkbtn" href="/new">手动新建</a>
+  </div>
+
+  <% if (!recent.length) { %>
+    <p class="empty">还没有卡片。下次卡住的时候按 <kbd>N</kbd>，5 秒记一张。</p>
+  <% } else { %>
+    <ul class="cards">
+      <% recent.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
+        <li class="card">
+          <a class="card-main" href="/p/<%= p.id %>">
+            <span class="card-title"><%= p.title %></span>
+            <span class="card-meta">
+              <span class="chip <%= s.cls %>"><%= s.text %></span>
+              <% if (p.recurrence_count > 0) { %><span class="chip recur">复发 <%= p.recurrence_count %></span><% } %>
+              <% if (p.tags) { %><span class="card-tags"><%= p.tags.split(',').join(' · ') %></span><% } %>
+            </span>
+          </a>
+          <span class="card-side">
+            <span class="dots" title="掌握度"><i class="<%= p.mastery >= 1 ? 'on' : '' %>"></i><i class="<%= p.mastery >= 2 ? 'on' : '' %>"></i><i class="<%= p.mastery >= 3 ? 'on' : '' %>"></i></span>
+            <% if (p.next_review_on) { %><span class="card-date"><%= p.next_review_on %></span><% } %>
+          </span>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>
+
+<% if (weakTags.length) { %>
+<section class="panel">
+  <div class="panel-head"><h2>薄弱区</h2><span class="hint">近 90 天复盘失败率</span></div>
+  <ul class="weak">
+    <% weakTags.forEach(function (t) { %>
+      <li>
+        <a href="/search?q=<%= encodeURIComponent(t.tag) %>">#<%= t.tag %></a>
+        <span class="weak-bar"><i style="width: <%= t.rate %>%"></i></span>
+        <span class="weak-num"><%= t.rate %>%</span>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>
+
+<%- include('partials/foot') %>
