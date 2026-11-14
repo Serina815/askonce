@@ -13,6 +13,25 @@
   const tags = String(problem.tags || '').split(',').filter(Boolean);
 %>
 
+<% if (duplicates && duplicates.length) { %>
+<section class="dup">
+  <p class="dup-kicker">可能重复</p>
+  <p class="dup-lead">这张卡看起来像你以前记过的问题。如果是同一个坑，合并过去就行。</p>
+  <ul class="dup-list">
+    <% duplicates.forEach(function (d) { %>
+      <li class="dup-item">
+        <a class="dup-link" href="/p/<%= d.id %>"><%= d.title %></a>
+        <span class="dup-meta"><%= d.reason %> · 记于 <%= String(d.created_at).slice(0, 10) %></span>
+        <form action="/p/<%= problem.id %>/merge/<%= d.id %>?_csrf=<%= csrfToken %>" method="post" data-confirm="合并到这张卡？新卡会被删除，截图搬过来，旧卡复发 +1、掌握度 -1、复盘提前到今天。">
+          <button class="btn ghost" type="submit">是同一个，合并</button>
+        </form>
+      </li>
+    <% }) %>
+  </ul>
+  <p class="hint">不是同一个问题？忽略这条提示就行，它只出现这一次。</p>
+</section>
+<% } %>
+
 <article class="problem">
   <header class="problem-head">
     <div class="problem-title">

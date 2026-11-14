@@ -10,6 +10,7 @@ const { saveShot } = require('../services/shot');
 const { normalizeError } = require('../services/text');
 const { generateDraft } = require('../services/ai');
 const { nextReviewDate } = require('../services/review');
+const { findDuplicates } = require('../services/duplicate');
 
 const router = express.Router();
 
@@ -85,6 +86,11 @@ router.get(
       all('SELECT * FROM reviews WHERE problem_id = ? ORDER BY reviewed_at DESC LIMIT 20', [id]),
     ]);
 
+    // "你以前记过"的候选只在创建后的那一屏出现一次，之后不再打扰
+    const hint = req.session.dupHint;
+    const duplicates = hint && hint.problemId === id ? hint.items : [];
+    delete req.session.dupHint;
+
     return res.render('problem', {
       title: problem.title,
       problem,
@@ -92,6 +98,7 @@ router.get(
       artifacts,
       recurrences,
       reviews,
+      duplicates,
       sources: ATTEMPT_SOURCES,
       results: RESULTS,
     });
@@ -127,6 +134,23 @@ router.post(
         `INSERT INTO artifacts (problem_id, kind, path, note) VALUES (?, 'image', ?, ?)`,
         [id, shot.path, '首次记录']
       );
+    }
+
+    // 这个坑以前踩过吗？命中就把候选带到详情页，由人决定合并还是忽略
+    const candidates = await all(
+      `SELECT id, title, error_text, norm_error, created_at
+         FROM problems
+        WHERE id <> ?
+        ORDER BY id DESC
+        LIMIT 300`,
+      [id]
+    );
+    const duplicates = findDuplicates(candidates, {
+      title: form.title,
+      errorText: form.errorText,
+    });
+    if (duplicates.length) {
+      req.session.dupHint = { problemId: id, items: duplicates };
     }
 
     req.session.flash = { type: 'ok', text: '已记下。解决之后回来补三问。' };
@@ -252,7 +276,7 @@ router.post(
     await run(
       `UPDATE problems
           SET recurrence_count = recurrence_count + 1,
-              mastery = GREATEST(mastery - 1, 0),
+              mastery = IF(mastery > 0, mastery - 1, 0),
               status = IF(status = 'mastered', 'solved', status),
               next_review_on = CURDATE(),
               last_seen_at = NOW()
@@ -396,6 +420,52 @@ router.post(
       text: `AI 补了 ${filled.length} 个空字段。记得用你自己的话改一遍——看懂 ≠ 会讲。`,
     };
     return res.redirect(`/p/${id}`);
+  })
+);
+
+/**
+ * 合并：确认"新卡其实就是旧卡那个坑"。
+ * 把新卡的截图搬到旧卡、旧卡记一次复发（掌握度 -1、复盘提前到今天），再删掉重复的新卡。
+ */
+router.post(
+  '/p/:id/merge/:oldId',
+  requireAuth,
+  asyncHandler(async (req, res, next) => {
+    const id = toInt(req.params.id);
+    const oldId = toInt(req.params.oldId);
+    if (!id || !oldId || id === oldId) return next();
+
+    const [fresh, older] = await Promise.all([loadProblem(id), loadProblem(oldId)]);
+    if (!fresh || !older) return next();
+
+    // 截图先搬过去，再删卡片（表上有级联删除，顺序反了图就没了）
+    await run('UPDATE artifacts SET problem_id = ? WHERE problem_id = ?', [oldId, id]);
+
+    await run('INSERT INTO recurrences (problem_id, note) VALUES (?, ?)', [
+      oldId,
+      str(`再次遇到：${fresh.title}`, 480),
+    ]);
+    await run(
+      `UPDATE problems
+          SET recurrence_count = recurrence_count + 1,
+              mastery = IF(mastery > 0, mastery - 1, 0),
+              status = IF(status = 'mastered', 'solved', status),
+              next_review_on = CURDATE(),
+              last_seen_at = NOW()
+        WHERE id = ?`,
+      [oldId]
+    );
+
+    await run('DELETE FROM attempts WHERE problem_id = ?', [id]);
+    await run('DELETE FROM reviews WHERE problem_id = ?', [id]);
+    await run('DELETE FROM recurrences WHERE problem_id = ?', [id]);
+    await run('DELETE FROM problems WHERE id = ?', [id]);
+
+    req.session.flash = {
+      type: 'ok',
+      text: '已合并：复发 +1，这次的截图和记录都并到了那张卡。',
+    };
+    return res.redirect(`/p/${oldId}`);
   })
 );
 
