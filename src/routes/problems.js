@@ -11,7 +11,7 @@ const upload = require('../middleware/upload');
 const { saveShot } = require('../services/shot');
 const { normalizeError } = require('../services/text');
 const config = require('../config');
-const { generateDraft } = require('../services/ai');
+const { generateReference } = require('../services/ai');
 const { nextReviewDate } = require('../services/review');
 const { findDuplicates } = require('../services/duplicate');
 
@@ -20,6 +20,19 @@ const router = express.Router();
 const SOURCES = ['self', 'ai', 'doc', 'mixed'];
 const ATTEMPT_SOURCES = ['ai', 'doc', 'self', 'other'];
 const RESULTS = ['effective', 'partial', 'failed', 'unknown'];
+
+// 截图允许挂在这些输入框下；其余一律当"卡片级"附件
+const ARTIFACT_FIELDS = new Set([
+  'title',
+  'error_text',
+  'context',
+  'q_what',
+  'q_why',
+  'q_how',
+  'q_plain',
+  'final_solution',
+  'attempt',
+]);
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -48,13 +61,6 @@ function parseTags(value) {
     .join(',');
 }
 
-function mergeTags(existing, extra) {
-  const set = new Set(
-    [...String(existing || '').split(','), ...extra].map((t) => t.trim()).filter(Boolean)
-  );
-  return [...set].slice(0, 10).join(',');
-}
-
 function readProblemForm(body = {}) {
   return {
     title: str(body.title, 200),
@@ -75,49 +81,49 @@ async function loadProblem(id) {
 }
 
 /**
- * 用 AI 把「问题 + 报错」变成三问草稿，只填空字段。
- * /p/:id/ai 和「编辑页保存并补三问」共用同一段逻辑。
- * @returns {Promise<{ok:boolean, error?:string, filled:number}>}
+ * 生成一份 AI 参考答案，只写 ai_* 字段。
+ * 用户自己的 q_* 永远不动——这是"对照"，不是"代写"。
  */
-async function fillDraftWithAi(problem) {
-  const result = await generateDraft({
+async function saveAiReference(problem) {
+  const result = await generateReference({
     title: problem.title,
     errorText: problem.error_text,
     context: problem.context,
+    myWhat: problem.q_what,
+    myWhy: problem.q_why,
+    myHow: problem.q_how,
   });
-  if (!result.ok) return { ok: false, error: result.error, filled: 0 };
+  if (!result.ok) return result;
+
+  await run(
+    `UPDATE problems
+        SET ai_what = ?, ai_why = ?, ai_how = ?, ai_model = ?, ai_generated_at = NOW()
+      WHERE id = ?`,
+    [result.ref.what, result.ref.why, result.ref.how, result.model, problem.id]
+  );
+  return { ok: true };
+}
+
+/** 把参考答案填进还空着的 q_*（已写的不覆盖），返回填了几个 */
+async function applyAiReference(problem) {
+  const map = [
+    ['q_what', problem.q_what, problem.ai_what],
+    ['q_why', problem.q_why, problem.ai_why],
+    ['q_how', problem.q_how, problem.ai_how],
+  ];
 
   const sets = [];
   const params = [];
-  let filled = 0;
-
-  const map = [
-    ['q_what', problem.q_what, result.draft.what],
-    ['q_how', problem.q_how, result.draft.how],
-    ['q_why', problem.q_why, result.draft.why],
-    ['q_plain', problem.q_plain, result.draft.plain],
-  ];
-  for (const [column, current, draft] of map) {
-    if (!String(current || '').trim() && draft) {
+  for (const [column, current, ref] of map) {
+    if (!String(current || '').trim() && String(ref || '').trim()) {
       sets.push(`${column} = ?`);
-      params.push(draft);
-      filled += 1;
+      params.push(ref);
     }
   }
+  if (!sets.length) return 0;
 
-  if (result.draft.tags.length) {
-    const merged = mergeTags(problem.tags, result.draft.tags);
-    if (merged !== problem.tags) {
-      sets.push('tags = ?');
-      params.push(merged);
-      filled += 1;
-    }
-  }
-
-  if (sets.length) {
-    await run(`UPDATE problems SET ${sets.join(', ')} WHERE id = ?`, [...params, problem.id]);
-  }
-  return { ok: true, filled };
+  await run(`UPDATE problems SET ${sets.join(', ')} WHERE id = ?`, [...params, problem.id]);
+  return sets.length;
 }
 
 router.get(
@@ -136,12 +142,15 @@ router.get(
       get('SELECT CURDATE() AS today'),
     ]);
 
-    // 跟着某条尝试一起贴的图，渲染在那条尝试下面；其余归整张卡
+    // 跟着某条尝试一起贴的图，渲染在那条尝试下面；带字段名的渲染在对应区块；其余归卡片
     const attemptShots = {};
+    const fieldShots = {};
     const cardArtifacts = [];
     for (const art of artifacts) {
       if (art.attempt_id) {
         (attemptShots[art.attempt_id] = attemptShots[art.attempt_id] || []).push(art);
+      } else if (art.field) {
+        (fieldShots[art.field] = fieldShots[art.field] || []).push(art);
       } else {
         cardArtifacts.push(art);
       }
@@ -158,6 +167,7 @@ router.get(
       attempts,
       artifacts: cardArtifacts,
       attemptShots,
+      fieldShots,
       today: clock ? clock.today : '',
       recurrences,
       reviews,
@@ -227,7 +237,21 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const problem = await loadProblem(toInt(req.params.id));
     if (!problem) return next();
-    return res.render('edit', { title: `编辑：${problem.title}`, problem });
+
+    // 已经贴在这张卡上的图，按字段分组，回到编辑页还能看到、还能删
+    const artifacts = await all(
+      `SELECT * FROM artifacts
+        WHERE problem_id = ? AND attempt_id IS NULL AND kind = 'image'
+        ORDER BY id ASC`,
+      [problem.id]
+    );
+    const fieldShots = {};
+    for (const art of artifacts) {
+      if (!art.field) continue;
+      (fieldShots[art.field] = fieldShots[art.field] || []).push(art);
+    }
+
+    return res.render('edit', { title: `编辑：${problem.title}`, problem, fieldShots });
   })
 );
 
@@ -276,19 +300,14 @@ router.post(
       );
     }
 
-    // 编辑页的「AI 补三问」：先保存当前内容，再把空的字段补上，不丢你写的东西
+    // 编辑页的「AI 参考」：先保存当前内容，再生成一份独立参考，不碰你写的三问
     if (req.body.action_ai === '1') {
       const fresh = await loadProblem(id);
-      const filled = await fillDraftWithAi(fresh);
-      if (!filled.ok) {
-        req.session.flash = { type: 'warn', text: `已保存，但 AI 没生成成功：${filled.error}` };
-      } else if (!filled.filled) {
-        req.session.flash = { type: 'ok', text: '已保存。三问都写过了，AI 没有覆盖你的内容。' };
+      const result = await saveAiReference(fresh);
+      if (!result.ok) {
+        req.session.flash = { type: 'warn', text: `已保存，但 AI 参考没生成成功：${result.error}` };
       } else {
-        req.session.flash = {
-          type: 'ok',
-          text: `已保存，AI 补了 ${filled.filled} 个空字段。用你自己的话改一遍。`,
-        };
+        req.session.flash = { type: 'ok', text: '已保存，AI 参考已生成（灰框），可以对照你自己的答案。' };
       }
       return res.redirect(`/p/${id}/edit`);
     }
@@ -478,12 +497,13 @@ router.post(
     if (!req.file) return res.status(400).json({ ok: false, error: '没有收到图片' });
 
     const shot = await saveShot(req.file.buffer, id);
+    const field = ARTIFACT_FIELDS.has(String(req.body.field || '')) ? String(req.body.field) : null;
     const inserted = await run(
-      `INSERT INTO artifacts (problem_id, kind, path, note) VALUES (?, 'image', ?, ?)`,
-      [id, shot.path, str(req.body.note, 60) || '粘贴']
+      `INSERT INTO artifacts (problem_id, field, kind, path, note) VALUES (?, ?, 'image', ?, ?)`,
+      [id, field, shot.path, str(req.body.note, 60) || '粘贴']
     );
 
-    return res.json({ ok: true, id: inserted.insertId, path: shot.path });
+    return res.json({ ok: true, id: inserted.insertId, path: shot.path, field });
   })
 );
 
@@ -509,7 +529,7 @@ router.delete(
 );
 
 router.post(
-  '/p/:id/ai',
+  '/p/:id/ai-reference',
   requireAuth,
   aiLimiter,
   asyncHandler(async (req, res, next) => {
@@ -517,22 +537,53 @@ router.post(
     const problem = await loadProblem(id);
     if (!problem) return next();
 
-    const result = await fillDraftWithAi(problem);
+    const result = await saveAiReference(problem);
+    const back = req.body.next === 'edit' ? `/p/${id}/edit` : `/p/${id}`;
 
     if (!result.ok) {
-      req.session.flash = { type: 'warn', text: `AI 没生成成功：${result.error}` };
-      return res.redirect(`/p/${id}`);
-    }
-    if (!result.filled) {
-      req.session.flash = { type: 'ok', text: '三问已经写过了，AI 没有覆盖你的内容。' };
-      return res.redirect(`/p/${id}`);
+      req.session.flash = { type: 'warn', text: `AI 参考没生成成功：${result.error}` };
+      return res.redirect(back);
     }
 
-    req.session.flash = {
-      type: 'ok',
-      text: `AI 补了 ${result.filled} 个空字段。记得用你自己的话改一遍——看懂 ≠ 会讲。`,
-    };
-    return res.redirect(`/p/${id}`);
+    req.session.flash = { type: 'ok', text: 'AI 参考已生成。先写你自己的，再往下对照。' };
+    return res.redirect(back);
+  })
+);
+
+router.post(
+  '/p/:id/ai-apply',
+  requireAuth,
+  asyncHandler(async (req, res, next) => {
+    const id = toInt(req.params.id);
+    const problem = await loadProblem(id);
+    if (!problem) return next();
+
+    const filled = await applyAiReference(problem);
+    req.session.flash = filled
+      ? { type: 'ok', text: `已用参考填了 ${filled} 个空字段，记得改成自己的话。` }
+      : { type: 'warn', text: '三问都已经有内容了，没有被覆盖。' };
+
+    return res.redirect(req.body.next === 'edit' ? `/p/${id}/edit` : `/p/${id}`);
+  })
+);
+
+router.post(
+  '/p/:id/ai-clear',
+  requireAuth,
+  asyncHandler(async (req, res, next) => {
+    const id = toInt(req.params.id);
+    const problem = await loadProblem(id);
+    if (!problem) return next();
+
+    await run(
+      `UPDATE problems
+          SET ai_what = NULL, ai_why = NULL, ai_how = NULL, ai_model = NULL, ai_generated_at = NULL
+        WHERE id = ?`,
+      [id]
+    );
+
+    req.session.flash = { type: 'ok', text: 'AI 参考已清空，你自己的三问没动。' };
+    return res.redirect(req.body.next === 'edit' ? `/p/${id}/edit` : `/p/${id}`);
   })
 );
 

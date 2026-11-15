@@ -61,35 +61,97 @@
     return out;
   }
 
-  function idsOf(input) {
-    return String(input.value || '').split(',').filter(Boolean);
-  }
-
-  function refreshTip(strip) {
+  function tipOf(strip) {
     var tip = strip.querySelector('.paste-tip');
-    if (!tip) return;
-    var hidden = strip.closest('form').querySelector('input[name="artifact_ids"]');
-    var n = hidden ? idsOf(hidden).length : 0;
-    tip.textContent = n ? '已添加 ' + n + ' 张 · 保存后归属这条记录' : 'Ctrl+V 可直接粘贴截图';
+    if (tip) return tip;
+    tip = document.createElement('span');
+    tip.className = 'paste-tip';
+    strip.appendChild(tip);
+    return tip;
   }
 
-  function setTip(strip, text) {
-    var tip = strip.querySelector('.paste-tip');
-    if (tip) tip.textContent = text;
+  /** 找到（必要时创建）某个字段下方的缩略图条 */
+  function stripFor(form, field) {
+    if (field) {
+      var found = form.querySelector('.paste-strip[data-field="' + field + '"]');
+      if (found) return found;
+    }
+
+    var strip = document.createElement('div');
+    strip.className = 'paste-strip';
+    strip.setAttribute('data-strip', '');
+    if (field) strip.setAttribute('data-field', field);
+
+    var input = field ? form.querySelector('[name="' + field + '"]') : null;
+    var anchor = input ? input.closest('.field') || input : null;
+
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(strip, anchor.nextSibling);
+    } else {
+      var actions = form.querySelector('.form-actions') || form.querySelector('.form-foot');
+      if (actions && actions.parentNode) actions.parentNode.insertBefore(strip, actions);
+      else form.appendChild(strip);
+    }
+
+    tipOf(strip).textContent = 'Ctrl+V 可粘贴截图';
+    return strip;
   }
 
-  /** 已有卡片：粘一张就传一张，返回的附件 id 记进隐藏域，保存时归属这条记录 */
-  function uploadPaste(form, file) {
-    var strip = form.querySelector('[data-paste-strip]');
-    var hidden = form.querySelector('input[name="artifact_ids"]');
+  function removeThumb(btn, id, base) {
+    fetch(base + '/' + id, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': CSRF },
+      credentials: 'same-origin',
+    })
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || !data.ok) throw new Error((data && data.error) || '删除失败');
+        var thumb = btn.closest('.paste-thumb');
+        var strip = thumb && thumb.parentNode;
+        if (thumb) thumb.remove();
+        if (strip && !strip.querySelector('.paste-thumb')) strip.remove();
+      })
+      .catch(function (err) {
+        window.alert('删除失败：' + err.message);
+      });
+  }
+
+  function makeThumb(path, id, base) {
+    var wrap = document.createElement('span');
+    wrap.className = 'paste-thumb';
+
+    var img = document.createElement('img');
+    img.src = path;
+    img.alt = '截图';
+    wrap.appendChild(img);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip-x';
+    btn.title = '删除这张截图';
+    btn.textContent = '×';
+    btn.addEventListener('click', function () {
+      removeThumb(btn, id, base);
+    });
+    wrap.appendChild(btn);
+
+    return wrap;
+  }
+
+  function uploadPaste(form, file, field) {
     var url = form.getAttribute('data-paste-upload');
     var base = form.getAttribute('data-artifact-base');
-    if (!strip || !hidden || !url) return;
+    if (!url || !base) return;
 
-    setTip(strip, '上传中…');
+    var strip = stripFor(form, field);
+    var tip = tipOf(strip);
+    tip.textContent = '上传中…';
 
     var fd = new FormData();
     fd.append('shot', file, 'paste.png');
+    if (field) fd.append('field', field);
 
     fetch(url, {
       method: 'POST',
@@ -104,39 +166,11 @@
       })
       .then(function (data) {
         if (!data || !data.ok) throw new Error((data && data.error) || '上传失败');
-
-        var wrap = document.createElement('span');
-        wrap.className = 'paste-thumb';
-
-        var img = document.createElement('img');
-        img.src = data.path;
-        img.alt = '粘贴的截图';
-        wrap.appendChild(img);
-
-        var remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'chip-x';
-        remove.title = '移除这张';
-        remove.textContent = '×';
-        remove.addEventListener('click', function () {
-          wrap.remove();
-          var ids = idsOf(hidden).filter(function (x) { return x !== String(data.id); });
-          hidden.value = ids.join(',');
-          refreshTip(strip);
-          fetch(base + '/' + data.id, {
-            method: 'DELETE',
-            headers: { 'x-csrf-token': CSRF },
-            credentials: 'same-origin',
-          }).catch(function () {});
-        });
-        wrap.appendChild(remove);
-
-        strip.insertBefore(wrap, strip.querySelector('.paste-tip'));
-        hidden.value = idsOf(hidden).concat(String(data.id)).join(',');
-        refreshTip(strip);
+        strip.insertBefore(makeThumb(data.path, data.id, base), tip);
+        tip.textContent = '已添加 · 保存后可见';
       })
       .catch(function (err) {
-        setTip(strip, '粘贴失败：' + err.message + '（可以改用「选择文件」）');
+        tip.textContent = '粘贴失败：' + err.message + '（可以改用「补充截图」）';
       });
   }
 
@@ -149,7 +183,7 @@
       for (var i = 0; i < files.length; i += 1) dt.items.add(files[i]);
       input.files = dt.files;
     } catch (err) {
-      return; // 老浏览器不支持 DataTransfer，静默放弃
+      return;
     }
     var preview = form.querySelector('[data-file-preview]');
     if (!preview) return;
@@ -164,7 +198,8 @@
     var files = clipboardImages(event);
     if (!files.length) return;
 
-    var form = event.target.closest ? event.target.closest('form') : null;
+    var target = event.target;
+    var form = target && target.closest ? target.closest('form') : null;
     if (!form && capture && !capture.hidden) form = capture.querySelector('form');
 
     // 焦点不在表单里（比如刚点完页面空白处就按 Ctrl+V）：退回页面上的上传表单
@@ -173,19 +208,37 @@
     }
     if (!form) return;
 
-    if (form.hasAttribute('data-paste-upload')) {
-      event.preventDefault();
-      // 缩略图在折叠的表单里会看不见，粘贴时顺手展开
-      var details = form.closest('details');
-      if (details && !details.open) details.open = true;
-      uploadPaste(form, files[0]);
-    } else if (form.hasAttribute('data-paste-file')) {
+    if (form.hasAttribute('data-paste-file')) {
       event.preventDefault();
       applyFile(form, files);
+      return;
+    }
+
+    if (form.hasAttribute('data-paste-upload')) {
+      event.preventDefault();
+      // 焦点在哪个框，图就挂在哪个框下面；找不到就挂到表单末尾
+      var field = target && target.name && target.closest('form') === form ? target.name : null;
+      var details = form.closest('details');
+      if (details && !details.open) details.open = true;
+      uploadPaste(form, files[0], field);
     }
   });
 
+  // 已经保存过的截图：点 × 直接删
+  document.addEventListener('click', function (event) {
+    var btn = event.target.closest && event.target.closest('[data-delete-artifact]');
+    if (!btn) return;
+    if (!window.confirm('删除这张截图？卡片和文字不会受影响。')) return;
+    removeThumb(btn, btn.getAttribute('data-id'), btn.getAttribute('data-base'));
+  });
+
   // ---------- 键盘 ----------
+
+  function submitForm(form) {
+    if (!form) return;
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.submit();
+  }
 
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
@@ -203,25 +256,24 @@
 
     // Ctrl/⌘ + S：保存当前表单（浏览器默认的"另存网页"太容易误触）
     if ((event.key === 's' || event.key === 'S') && (event.metaKey || event.ctrlKey) && !event.altKey) {
-      var activeForm = document.activeElement && document.activeElement.closest
+      var saveForm = document.activeElement && document.activeElement.closest
         ? document.activeElement.closest('form')
         : null;
-      if (activeForm) {
+      if (saveForm) {
         event.preventDefault();
-        if (typeof activeForm.requestSubmit === 'function') activeForm.requestSubmit();
-        else activeForm.submit();
+        submitForm(saveForm);
         return;
       }
     }
 
-    // Ctrl/⌘ + Enter：提交当前所在的表单（浮层、编辑页、尝试表单都能用）
+    // Ctrl/⌘ + Enter：提交当前所在的表单
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       var active = document.activeElement;
-      var form = active && active.closest ? active.closest('form') : capture && capture.querySelector('form');
+      var form = active && active.closest ? active.closest('form') : null;
+      if (!form && capture && !capture.hidden) form = capture.querySelector('form');
       if (form) {
         event.preventDefault();
-        if (typeof form.requestSubmit === 'function') form.requestSubmit();
-        else form.submit();
+        submitForm(form);
       }
       return;
     }

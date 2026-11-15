@@ -56,8 +56,8 @@
     </div>
 
     <div class="problem-actions">
-      <form action="/p/<%= problem.id %>/ai?_csrf=<%= csrfToken %>" method="post" data-confirm="让 AI 生成三问草稿？只会填充空的字段。" data-busy>
-        <button class="btn ghost" type="submit" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>AI 补三问</button>
+      <form action="/p/<%= problem.id %>/ai-reference?_csrf=<%= csrfToken %>" method="post" data-busy>
+        <button class="btn ghost" type="submit" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>><%= (problem.ai_what || problem.ai_why || problem.ai_how) ? '重新生成参考' : '生成 AI 参考' %></button>
       </form>
       <a class="btn ghost" href="/p/<%= problem.id %>/edit">编辑</a>
       <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
@@ -123,6 +123,7 @@
         <button type="button" class="linkbtn" data-copy="error-text">复制</button>
       </div>
       <pre class="code" id="error-text"><%= problem.error_text %></pre>
+      <%- include('partials/shots', { shots: fieldShots.error_text, field: 'error_text', problemId: problem.id }) %>
     </section>
   <% } %>
 
@@ -130,6 +131,7 @@
     <section class="block">
       <h2>场景</h2>
       <p class="prose"><%= problem.context %></p>
+      <%- include('partials/shots', { shots: fieldShots.context, field: 'context', problemId: problem.id }) %>
     </section>
   <% } %>
 
@@ -141,7 +143,7 @@
 
     <% if (!problem.q_what && !problem.q_how && !problem.q_why && !problem.q_plain) { %>
       <p class="empty">
-        还没写。可以自己用三句话想清楚，也可以点上面的「AI 补三问」先拿草稿——
+        还没写。可以自己用三句话想清楚，也可以点上面的「生成 AI 参考」拿一份对照——
         但最后一定要改写成你自己的话。
       </p>
     <% } else { %>
@@ -149,22 +151,56 @@
         <div class="qa-item">
           <h3>是什么</h3>
           <p><%= problem.q_what || '—' %></p>
-        </div>
-        <div class="qa-item">
-          <h3>怎么解</h3>
-          <p class="pre-wrap"><%= problem.q_how || '—' %></p>
+          <%- include('partials/shots', { shots: fieldShots.q_what, field: 'q_what', problemId: problem.id }) %>
         </div>
         <div class="qa-item">
           <h3>为什么</h3>
           <p class="pre-wrap"><%= problem.q_why || '—' %></p>
+          <%- include('partials/shots', { shots: fieldShots.q_why, field: 'q_why', problemId: problem.id }) %>
+        </div>
+        <div class="qa-item">
+          <h3>怎么做</h3>
+          <p class="pre-wrap"><%= problem.q_how || '—' %></p>
+          <%- include('partials/shots', { shots: fieldShots.q_how, field: 'q_how', problemId: problem.id }) %>
         </div>
         <div class="qa-item qa-plain">
           <h3>人话版</h3>
           <p><%= problem.q_plain || '—' %></p>
+          <%- include('partials/shots', { shots: fieldShots.q_plain, field: 'q_plain', problemId: problem.id }) %>
         </div>
       </div>
     <% } %>
   </section>
+
+  <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
+    <details class="block ai-ref-block">
+      <summary>
+        <span class="ai-badge">AI</span>
+        参考答案（不是你的答案，点开对照）
+        <span class="ai-meta"><%= problem.ai_model || 'AI' %></span>
+      </summary>
+      <div class="ai-ref">
+        <div class="ai-block">
+          <h3>是什么</h3>
+          <p class="pre-wrap"><%= problem.ai_what || '（没生成）' %></p>
+        </div>
+        <div class="ai-block">
+          <h3>为什么</h3>
+          <p class="pre-wrap"><%= problem.ai_why || '（没生成）' %></p>
+        </div>
+        <div class="ai-block">
+          <h3>怎么做</h3>
+          <p class="pre-wrap"><%= problem.ai_how || '（没生成）' %></p>
+        </div>
+        <div class="ai-ref-actions">
+          <form action="/p/<%= problem.id %>/ai-apply?_csrf=<%= csrfToken %>" method="post" data-busy>
+            <button class="btn ghost" type="submit">用参考填上空的字段</button>
+          </form>
+          <a class="linkbtn" href="/p/<%= problem.id %>/edit">去编辑页管理参考</a>
+        </div>
+      </div>
+    </details>
+  <% } %>
 
   <% if (problem.final_solution) { %>
     <section class="block block-key">
@@ -176,6 +212,7 @@
       <p class="hint">
         解决方式：<%= problem.source === 'self' ? '自己想的' : problem.source === 'ai' ? 'AI 给的' : problem.source === 'doc' ? '查文档' : problem.source === 'mixed' ? '混合' : '未标注' %>
       </p>
+      <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id }) %>
     </section>
   <% } %>
 
@@ -236,9 +273,7 @@
           </select>
         </div>
         <textarea name="solution" rows="4" required placeholder="把方案贴进来。无效的方案也要记——它会告诉你 AI 在哪儿不靠谱。"></textarea>
-        <div class="paste-strip" data-paste-strip>
-          <span class="paste-tip">Ctrl+V 可直接粘贴截图</span>
-        </div>
+        <p class="hint">Ctrl+V 可粘贴截图，会跟着这条尝试保存</p>
         <div class="form-foot">
           <button class="btn" type="submit">保存尝试</button>
           <span class="hint">截图会跟着这条尝试一起保存</span>

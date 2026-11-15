@@ -3,19 +3,19 @@
 const config = require('../config');
 
 /**
- * AI 草稿生成（OpenAI 兼容接口）。
- * 只做一件事：把「问题 + 报错」变成三问的草稿，供人修改。
- * 不做任何自动入库——避免 AI 的猜测被当成你的理解。
+ * AI 参考答案（OpenAI 兼容接口）。
+ * 只做一件事：针对「问题 + 报错 + 场景」给一份 what / why / how 的独立参考，
+ * 用来跟学习者自己写的三问对照。绝不写回 q_* 字段。
  */
 
 const SYSTEM_PROMPT = [
-  '你是技术学习助教，帮助学习者把一个具体的技术问题拆成可以理解的四块。',
-  '只依据用户提供的报错与场景作答，不要编造不存在的命令、参数或文件名。',
-  '信息不足时，用"可能是……"表述，并在 why 里说明不确定的地方。',
-  '输出必须是 JSON 对象，字段如下：',
-  '{"what":"问题的本质，一句话","how":"可执行步骤，用 1. 2. 3. 分行，最多 5 条",',
-  ' "why":"背后的原理与权衡，3 句以内","plain":"讲给完全不懂的人听的比喻，一句话",',
-  ' "tags":["最多3个技术标签"]}',
+  '你是技术学习助教。学习者已经自己写过「是什么 / 为什么 / 怎么做」，现在需要一份独立参考答案用来对照。',
+  '只依据用户提供的问题、报错与场景作答，不要编造不存在的命令、参数或文件名。',
+  '信息不足时用"可能是……"表述，并在 why 里说明不确定的地方。',
+  '输出必须是 JSON 对象，字段顺序如下：',
+  '{"what":"问题的本质，一句话",',
+  ' "why":"背后的原因与权衡，3 句以内，讲清为什么会这样",',
+  ' "how":"可执行步骤，用 1. 2. 3. 分行，最多 5 条"}',
   '全部使用简体中文。不要输出 Markdown 代码块，不要输出 JSON 以外的任何文字。',
 ].join('\n');
 
@@ -94,9 +94,9 @@ async function callApi(messages, { withJsonMode = true } = {}) {
 }
 
 /**
- * @returns {Promise<{ok:true, draft:object} | {ok:false, error:string}>}
+ * @returns {Promise<{ok:true, ref:{what:string,why:string,how:string}, model:string} | {ok:false, error:string}>}
  */
-async function generateDraft({ title, errorText, context }) {
+async function generateReference({ title, errorText, context, myWhat, myWhy, myHow }) {
   if (!config.ai.enabled) {
     return { ok: false, error: '还没有配置 AI_API_KEY，先填 .env 再试' };
   }
@@ -105,6 +105,10 @@ async function generateDraft({ title, errorText, context }) {
     `问题：${str(title, 300)}`,
     errorText ? `报错原文：\n${str(errorText, 2000)}` : '（没有报错原文）',
     context ? `场景：${str(context, 500)}` : '',
+    myWhat ? `我自己写的「是什么」：${str(myWhat, 800)}` : '',
+    myWhy ? `我自己写的「为什么」：${str(myWhy, 800)}` : '',
+    myHow ? `我自己写的「怎么做」：${str(myHow, 1200)}` : '',
+    '（上面是我自己的理解，请给出一份独立的参考答案用于对照，不要复述我的原话。）',
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -135,20 +139,16 @@ async function generateDraft({ title, errorText, context }) {
     return { ok: false, error: 'AI 返回的不是合法 JSON，换个模型或再试一次' };
   }
 
-  const tags = Array.isArray(parsed.tags)
-    ? parsed.tags.map((t) => str(t, 20)).filter(Boolean).slice(0, 3)
-    : [];
-
-  return {
-    ok: true,
-    draft: {
-      what: str(parsed.what, 800),
-      how: str(parsed.how, 2000),
-      why: str(parsed.why, 2000),
-      plain: str(parsed.plain, 500),
-      tags,
-    },
+  const ref = {
+    what: str(parsed.what, 800),
+    why: str(parsed.why, 2000),
+    how: str(parsed.how, 2000),
   };
+  if (!ref.what && !ref.why && !ref.how) {
+    return { ok: false, error: 'AI 返回为空，稍后再试' };
+  }
+
+  return { ok: true, ref, model: config.ai.model };
 }
 
-module.exports = { generateDraft, isEnabled: () => config.ai.enabled, endpoint };
+module.exports = { generateReference, isEnabled: () => config.ai.enabled, endpoint };

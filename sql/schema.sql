@@ -26,6 +26,13 @@ CREATE TABLE IF NOT EXISTS problems (
   q_why            TEXT,
   q_plain          TEXT,
 
+  -- AI 参考答案：只写这里，绝不覆盖上面的 q_*
+  ai_what          TEXT,
+  ai_why           TEXT,
+  ai_how           TEXT,
+  ai_model         VARCHAR(64) DEFAULT NULL,
+  ai_generated_at  DATETIME DEFAULT NULL,
+
   final_solution   TEXT,
   source           ENUM('self','ai','doc','mixed') DEFAULT NULL,
   status           ENUM('draft','solved','mastered','archived') NOT NULL DEFAULT 'draft',
@@ -63,6 +70,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   problem_id INT UNSIGNED NOT NULL,
   attempt_id INT UNSIGNED DEFAULT NULL,
+  field      VARCHAR(32) DEFAULT NULL,
   kind       ENUM('image','link','file') NOT NULL,
   url        VARCHAR(1000) DEFAULT NULL,
   path       VARCHAR(255) DEFAULT NULL,

@@ -3,25 +3,29 @@
 <section class="form-page">
   <h1>编辑这张卡</h1>
 
-  <form class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
+  <form id="problem-form" class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
         data-busy
         data-paste-upload="/p/<%= problem.id %>/artifacts/upload"
         data-artifact-base="/p/<%= problem.id %>/artifacts">
     <input type="hidden" name="artifact_ids" value="">
+
     <div class="field">
       <label for="title">一句话问题 *</label>
       <input id="title" type="text" name="title" required maxlength="200" value="<%= problem.title %>">
+      <%- include('partials/shots', { shots: fieldShots.title, field: 'title', problemId: problem.id }) %>
     </div>
 
     <div class="field">
       <label for="error_text">报错原文</label>
       <textarea id="error_text" name="error_text" rows="6"><%= problem.error_text || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.error_text, field: 'error_text', problemId: problem.id }) %>
     </div>
 
     <div class="row">
       <div class="field">
         <label for="context">场景 / 环境</label>
         <input id="context" type="text" name="context" maxlength="500" value="<%= problem.context || '' %>">
+        <%- include('partials/shots', { shots: fieldShots.context, field: 'context', problemId: problem.id }) %>
       </div>
       <div class="field">
         <label for="tags">标签</label>
@@ -30,32 +34,74 @@
     </div>
 
     <h2 class="form-section">三问</h2>
+    <p class="hint form-section-hint">先自己想清楚，再往下看 AI 参考。顺序是：是什么 → 为什么 → 怎么做。</p>
 
     <div class="field">
       <label for="q_what">是什么（现象 + 根因，一句话）</label>
       <textarea id="q_what" name="q_what" rows="2"><%= problem.q_what || '' %></textarea>
-    </div>
-
-    <div class="field">
-      <label for="q_how">怎么解（可执行步骤）</label>
-      <textarea id="q_how" name="q_how" rows="4"><%= problem.q_how || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.q_what, field: 'q_what', problemId: problem.id }) %>
     </div>
 
     <div class="field">
       <label for="q_why">为什么（原理 / 权衡）</label>
       <textarea id="q_why" name="q_why" rows="4"><%= problem.q_why || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.q_why, field: 'q_why', problemId: problem.id }) %>
+    </div>
+
+    <div class="field">
+      <label for="q_how">怎么做（可执行步骤）</label>
+      <textarea id="q_how" name="q_how" rows="4"><%= problem.q_how || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.q_how, field: 'q_how', problemId: problem.id }) %>
     </div>
 
     <div class="field">
       <label for="q_plain">人话版（讲给完全不懂的人）</label>
       <textarea id="q_plain" name="q_plain" rows="2"><%= problem.q_plain || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.q_plain, field: 'q_plain', problemId: problem.id }) %>
     </div>
+
+    <h2 class="form-section">AI 参考</h2>
+
+    <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
+      <div class="ai-ref" data-ai-ref>
+        <p class="ai-ref-head">
+          <span class="ai-badge">AI</span>
+          参考答案 · 不是标准答案，只用来对照你想的对不对
+          <% if (problem.ai_model) { %><span class="ai-meta"><%= problem.ai_model %> · <%= String(problem.ai_generated_at || '').slice(0, 16) %></span><% } %>
+        </p>
+
+        <div class="ai-block">
+          <h3>是什么</h3>
+          <p class="pre-wrap"><%= problem.ai_what || '（没生成）' %></p>
+        </div>
+        <div class="ai-block">
+          <h3>为什么</h3>
+          <p class="pre-wrap"><%= problem.ai_why || '（没生成）' %></p>
+        </div>
+        <div class="ai-block">
+          <h3>怎么做</h3>
+          <p class="pre-wrap"><%= problem.ai_how || '（没生成）' %></p>
+        </div>
+
+        <div class="ai-ref-actions">
+          <button class="btn ghost" type="submit" form="problem-form" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>重新生成</button>
+          <button class="btn ghost" type="submit" form="ai-apply-form">用参考填上空的字段</button>
+          <button class="linkbtn danger" type="submit" form="ai-clear-form">清空参考</button>
+        </div>
+      </div>
+    <% } else { %>
+      <p class="empty ai-empty">
+        还没有 AI 参考。写你自己的三问，保存时勾上「保存并生成 AI 参考」，
+        它会以独立灰框出现——<strong>不会覆盖你写的内容</strong>。
+      </p>
+    <% } %>
 
     <h2 class="form-section">结论</h2>
 
     <div class="field">
       <label for="final_solution">最终方案（照做就行的那版）</label>
       <textarea id="final_solution" name="final_solution" rows="6"><%= problem.final_solution || '' %></textarea>
+      <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id }) %>
     </div>
 
     <div class="row">
@@ -69,21 +115,24 @@
         </select>
       </div>
       <div class="field">
-        <label for="shot">补充截图</label>
+        <label for="shot">补充截图（文件）</label>
         <input id="shot" type="file" name="shot" accept="image/*">
       </div>
     </div>
 
-    <div class="paste-strip" data-paste-strip>
-      <span class="paste-tip">任何输入框里都可以 Ctrl+V 粘贴截图，会加到这张卡</span>
-    </div>
-
     <div class="form-actions">
       <button class="btn" type="submit">保存</button>
-      <button class="btn ghost" type="submit" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>AI 补三问</button>
+      <button class="btn ghost" type="submit" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>保存并生成 AI 参考</button>
       <a class="btn ghost" href="/p/<%= problem.id %>">取消</a>
-      <span class="hint">Ctrl+S 保存<% if (aiEnabled) { %> · AI 只补空字段，不覆盖你写的<% } else { %> · AI 未配置（.env 填 AI_API_KEY 后可用）<% } %></span>
+      <span class="hint">Ctrl+S 保存<% if (!aiEnabled) { %> · AI 未配置（.env 填 AI_API_KEY 后可用）<% } %></span>
     </div>
+  </form>
+
+  <form id="ai-apply-form" action="/p/<%= problem.id %>/ai-apply?_csrf=<%= csrfToken %>" method="post" hidden>
+    <input type="hidden" name="next" value="edit">
+  </form>
+  <form id="ai-clear-form" action="/p/<%= problem.id %>/ai-clear?_csrf=<%= csrfToken %>" method="post" data-confirm="清空 AI 参考？你自己写的三问不受影响。" hidden>
+    <input type="hidden" name="next" value="edit">
   </form>
 </section>
 
