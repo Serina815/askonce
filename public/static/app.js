@@ -166,10 +166,18 @@
 
     var form = event.target.closest ? event.target.closest('form') : null;
     if (!form && capture && !capture.hidden) form = capture.querySelector('form');
+
+    // 焦点不在表单里（比如刚点完页面空白处就按 Ctrl+V）：退回页面上的上传表单
+    if (!form || (!form.hasAttribute('data-paste-upload') && !form.hasAttribute('data-paste-file'))) {
+      form = document.querySelector('form[data-paste-upload]') || form;
+    }
     if (!form) return;
 
     if (form.hasAttribute('data-paste-upload')) {
       event.preventDefault();
+      // 缩略图在折叠的表单里会看不见，粘贴时顺手展开
+      var details = form.closest('details');
+      if (details && !details.open) details.open = true;
       uploadPaste(form, files[0]);
     } else if (form.hasAttribute('data-paste-file')) {
       event.preventDefault();
@@ -191,6 +199,19 @@
         openCapture();
       }
       return;
+    }
+
+    // Ctrl/⌘ + S：保存当前表单（浏览器默认的"另存网页"太容易误触）
+    if ((event.key === 's' || event.key === 'S') && (event.metaKey || event.ctrlKey) && !event.altKey) {
+      var activeForm = document.activeElement && document.activeElement.closest
+        ? document.activeElement.closest('form')
+        : null;
+      if (activeForm) {
+        event.preventDefault();
+        if (typeof activeForm.requestSubmit === 'function') activeForm.requestSubmit();
+        else activeForm.submit();
+        return;
+      }
     }
 
     // Ctrl/⌘ + Enter：提交当前所在的表单（浮层、编辑页、尝试表单都能用）

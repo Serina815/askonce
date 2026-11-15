@@ -80,7 +80,9 @@
 
     <div class="form-actions">
       <button class="btn" type="submit">保存</button>
+      <button class="btn ghost" type="submit" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>AI 补三问</button>
       <a class="btn ghost" href="/p/<%= problem.id %>">取消</a>
+      <span class="hint">Ctrl+S 保存<% if (aiEnabled) { %> · AI 只补空字段，不覆盖你写的<% } else { %> · AI 未配置（.env 填 AI_API_KEY 后可用）<% } %></span>
     </div>
   </form>
 </section>

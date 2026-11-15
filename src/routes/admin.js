@@ -13,7 +13,7 @@ const router = express.Router();
 
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
+  max: Number(process.env.LOGIN_RATE_LIMIT_MAX || 5), // 本地回归脚本会调大，生产保持 5
   standardHeaders: true,
   legacyHeaders: false,
   message: '尝试太频繁，请一分钟后再来。',

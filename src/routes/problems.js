@@ -74,6 +74,52 @@ async function loadProblem(id) {
   return get('SELECT * FROM problems WHERE id = ?', [id]);
 }
 
+/**
+ * 用 AI 把「问题 + 报错」变成三问草稿，只填空字段。
+ * /p/:id/ai 和「编辑页保存并补三问」共用同一段逻辑。
+ * @returns {Promise<{ok:boolean, error?:string, filled:number}>}
+ */
+async function fillDraftWithAi(problem) {
+  const result = await generateDraft({
+    title: problem.title,
+    errorText: problem.error_text,
+    context: problem.context,
+  });
+  if (!result.ok) return { ok: false, error: result.error, filled: 0 };
+
+  const sets = [];
+  const params = [];
+  let filled = 0;
+
+  const map = [
+    ['q_what', problem.q_what, result.draft.what],
+    ['q_how', problem.q_how, result.draft.how],
+    ['q_why', problem.q_why, result.draft.why],
+    ['q_plain', problem.q_plain, result.draft.plain],
+  ];
+  for (const [column, current, draft] of map) {
+    if (!String(current || '').trim() && draft) {
+      sets.push(`${column} = ?`);
+      params.push(draft);
+      filled += 1;
+    }
+  }
+
+  if (result.draft.tags.length) {
+    const merged = mergeTags(problem.tags, result.draft.tags);
+    if (merged !== problem.tags) {
+      sets.push('tags = ?');
+      params.push(merged);
+      filled += 1;
+    }
+  }
+
+  if (sets.length) {
+    await run(`UPDATE problems SET ${sets.join(', ')} WHERE id = ?`, [...params, problem.id]);
+  }
+  return { ok: true, filled };
+}
+
 router.get(
   '/p/:id',
   requireAuth,
@@ -228,6 +274,23 @@ router.post(
         `INSERT INTO artifacts (problem_id, kind, path, note) VALUES (?, 'image', ?, ?)`,
         [id, shot.path, '补充截图']
       );
+    }
+
+    // 编辑页的「AI 补三问」：先保存当前内容，再把空的字段补上，不丢你写的东西
+    if (req.body.action_ai === '1') {
+      const fresh = await loadProblem(id);
+      const filled = await fillDraftWithAi(fresh);
+      if (!filled.ok) {
+        req.session.flash = { type: 'warn', text: `已保存，但 AI 没生成成功：${filled.error}` };
+      } else if (!filled.filled) {
+        req.session.flash = { type: 'ok', text: '已保存。三问都写过了，AI 没有覆盖你的内容。' };
+      } else {
+        req.session.flash = {
+          type: 'ok',
+          text: `已保存，AI 补了 ${filled.filled} 个空字段。用你自己的话改一遍。`,
+        };
+      }
+      return res.redirect(`/p/${id}/edit`);
     }
 
     req.session.flash = { type: 'ok', text: '已保存' };
@@ -454,53 +517,20 @@ router.post(
     const problem = await loadProblem(id);
     if (!problem) return next();
 
-    const filled = [];
-    const result = await generateDraft({
-      title: problem.title,
-      errorText: problem.error_text,
-      context: problem.context,
-    });
+    const result = await fillDraftWithAi(problem);
 
     if (!result.ok) {
       req.session.flash = { type: 'warn', text: `AI 没生成成功：${result.error}` };
       return res.redirect(`/p/${id}`);
     }
-
-    const sets = [];
-    const params = [];
-    const map = [
-      ['q_what', problem.q_what, result.draft.what],
-      ['q_how', problem.q_how, result.draft.how],
-      ['q_why', problem.q_why, result.draft.why],
-      ['q_plain', problem.q_plain, result.draft.plain],
-    ];
-    for (const [column, current, draft] of map) {
-      if (!String(current || '').trim() && draft) {
-        sets.push(`${column} = ?`);
-        params.push(draft);
-        filled.push(column);
-      }
-    }
-
-    if (result.draft.tags.length) {
-      const merged = mergeTags(problem.tags, result.draft.tags);
-      if (merged !== problem.tags) {
-        sets.push('tags = ?');
-        params.push(merged);
-        filled.push('tags');
-      }
-    }
-
-    if (!sets.length) {
+    if (!result.filled) {
       req.session.flash = { type: 'ok', text: '三问已经写过了，AI 没有覆盖你的内容。' };
       return res.redirect(`/p/${id}`);
     }
 
-    await run(`UPDATE problems SET ${sets.join(', ')} WHERE id = ?`, [...params, id]);
-
     req.session.flash = {
       type: 'ok',
-      text: `AI 补了 ${filled.length} 个空字段。记得用你自己的话改一遍——看懂 ≠ 会讲。`,
+      text: `AI 补了 ${result.filled} 个空字段。记得用你自己的话改一遍——看懂 ≠ 会讲。`,
     };
     return res.redirect(`/p/${id}`);
   })

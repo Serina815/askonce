@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
@@ -40,7 +41,23 @@ app.use(
 
 if (!config.isProd) app.use(morgan('dev'));
 
-app.use('/static', express.static(path.join(__dirname, '..', 'public', 'static'), { maxAge: '7d' }));
+// 静态资源带 mtime 版本号：改完 CSS/JS 换一个 URL，避免浏览器拿 7 天的旧缓存
+const staticDir = path.join(__dirname, '..', 'public', 'static');
+function mtimeOf(file) {
+  try {
+    return Math.round(fs.statSync(path.join(staticDir, file)).mtimeMs);
+  } catch (err) {
+    return 0;
+  }
+}
+const assetVersion = `${mtimeOf('style.css')}-${mtimeOf('app.js')}`;
+
+app.use((req, res, next) => {
+  res.locals.assetV = assetVersion;
+  next();
+});
+
+app.use('/static', express.static(staticDir, { maxAge: '7d' }));
 app.use('/uploads', express.static(path.join(config.publicDir, 'uploads'), { maxAge: '1d' }));
 
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
