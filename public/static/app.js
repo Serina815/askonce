@@ -232,6 +232,134 @@
     removeThumb(btn, btn.getAttribute('data-id'), btn.getAttribute('data-base'));
   });
 
+  // ---------- 图片放大 ----------
+
+  var lightbox = null;
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  function openLightbox(src) {
+    if (!lightbox) {
+      lightbox = document.createElement('div');
+      lightbox.className = 'lightbox';
+      lightbox.hidden = true;
+
+      var big = document.createElement('img');
+      big.alt = '截图';
+      lightbox.appendChild(big);
+
+      var close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'lightbox-close';
+      close.textContent = '×';
+      lightbox.appendChild(close);
+
+      lightbox.addEventListener('click', function (e) {
+        if (e.target === lightbox || e.target === close) closeLightbox();
+      });
+      document.body.appendChild(lightbox);
+    }
+    lightbox.querySelector('img').src = src;
+    lightbox.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  document.addEventListener('click', function (event) {
+    var img = event.target.closest && event.target.closest('[data-lightbox]');
+    if (!img) return;
+    event.preventDefault();
+    openLightbox(img.getAttribute('src'));
+  });
+
+  // ---------- 编辑页：离开前问要不要保存 ----------
+
+  var editForm = document.getElementById('problem-form');
+  var dirty = false;
+  var dirtyModal = null;
+
+  if (editForm) {
+    editForm.addEventListener('input', function () {
+      dirty = true;
+    });
+    editForm.addEventListener('change', function () {
+      dirty = true;
+    });
+  }
+
+  function buildDirtyModal() {
+    var wrap = document.createElement('div');
+    wrap.className = 'modal';
+    wrap.hidden = true;
+    wrap.innerHTML =
+      '<div class="modal-panel">' +
+      '<h3>有没保存的修改</h3>' +
+      '<p>回预览页之前，要先把这次的修改保存下来吗？</p>' +
+      '<div class="modal-actions">' +
+      '<button type="button" class="btn" data-dirty="save">保存并返回</button>' +
+      '<button type="button" class="btn ghost" data-dirty="discard">不保存</button>' +
+      '<button type="button" class="linkbtn" data-dirty="stay">留在本页</button>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    return wrap;
+  }
+
+  function closeDirtyModal() {
+    if (dirtyModal) dirtyModal.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  function askBeforeLeave(href) {
+    if (!dirtyModal) dirtyModal = buildDirtyModal();
+    dirtyModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+
+    dirtyModal.onclick = function (event) {
+      var btn = event.target.closest('[data-dirty]');
+      if (!btn) {
+        if (event.target === dirtyModal) closeDirtyModal();
+        return;
+      }
+      var action = btn.getAttribute('data-dirty');
+      if (action === 'stay') {
+        closeDirtyModal();
+        return;
+      }
+      if (action === 'discard') {
+        window.location.href = href;
+        return;
+      }
+      // 保存并返回
+      var flag = document.createElement('input');
+      flag.type = 'hidden';
+      flag.name = 'action_back';
+      flag.value = '1';
+      editForm.appendChild(flag);
+      closeDirtyModal();
+      if (typeof editForm.requestSubmit === 'function') editForm.requestSubmit();
+      else editForm.submit();
+    };
+  }
+
+  document.addEventListener('click', function (event) {
+    var exit = event.target.closest && event.target.closest('[data-exit-to]');
+    if (!exit || !editForm || !dirty) return;
+    event.preventDefault();
+    askBeforeLeave(exit.getAttribute('data-exit-to'));
+  });
+
+  // 顶栏高度会随窗口宽度换行变化，粘性操作条跟着它走
+  function syncTopbarHeight() {
+    var bar = document.querySelector('.topbar');
+    if (!bar) return;
+    document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+  }
+  syncTopbarHeight();
+  window.addEventListener('resize', syncTopbarHeight);
+
   // ---------- 键盘 ----------
 
   function submitForm(form) {
@@ -243,6 +371,8 @@
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
       closeCapture();
+      closeLightbox();
+      closeDirtyModal();
       return;
     }
 
@@ -360,7 +490,7 @@
     if (event.defaultPrevented) return;
     var form = event.target;
     if (!form.hasAttribute('data-busy')) return;
-    var btn = form.querySelector('button[type="submit"]');
+    var btn = event.submitter || form.querySelector('button[type="submit"]');
     if (!btn) return;
     if (btn.dataset.busy === '1') {
       event.preventDefault();

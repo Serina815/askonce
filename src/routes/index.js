@@ -77,7 +77,7 @@ router.get(
     const selfSolved = Number(month.self_solved) || 0;
 
     return res.render('home', {
-      title: '今天',
+      title: '全部',
       dueCount: Number(due.c) || 0,
       draftCount: Number(draftTotal.c) || 0,
       recent,

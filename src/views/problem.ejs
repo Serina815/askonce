@@ -36,6 +36,16 @@
 <% } %>
 
 <article class="problem">
+  <div class="preview-bar">
+    <span class="preview-flag">只读预览 · 修改请点编辑</span>
+    <div class="preview-actions">
+      <a class="btn" href="/p/<%= problem.id %>/edit">编辑</a>
+      <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
+        <button class="linkbtn danger" type="submit">删除</button>
+      </form>
+    </div>
+  </div>
+
   <header class="problem-head">
     <div class="problem-title">
       <div class="problem-chips">
@@ -53,16 +63,6 @@
         <span class="muted">记录于 <%= String(problem.created_at).slice(0, 10) %></span>
         <% if (problem.next_review_on) { %><span class="muted">· 下次复盘 <%= problem.next_review_on %></span><% } %>
       </p>
-    </div>
-
-    <div class="problem-actions">
-      <form action="/p/<%= problem.id %>/ai-reference?_csrf=<%= csrfToken %>" method="post" data-busy>
-        <button class="btn ghost" type="submit" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>><%= (problem.ai_what || problem.ai_why || problem.ai_how) ? '重新生成参考' : '生成 AI 参考' %></button>
-      </form>
-      <a class="btn ghost" href="/p/<%= problem.id %>/edit">编辑</a>
-      <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
-        <button class="linkbtn danger" type="submit">删除</button>
-      </form>
     </div>
   </header>
 
@@ -138,7 +138,6 @@
   <section class="block">
     <div class="block-head">
       <h2>三问</h2>
-      <a class="linkbtn" href="/p/<%= problem.id %>/edit">修改</a>
     </div>
 
     <% if (!problem.q_what && !problem.q_how && !problem.q_why && !problem.q_plain) { %>
@@ -193,10 +192,7 @@
           <p class="pre-wrap"><%= problem.ai_how || '（没生成）' %></p>
         </div>
         <div class="ai-ref-actions">
-          <form action="/p/<%= problem.id %>/ai-apply?_csrf=<%= csrfToken %>" method="post" data-busy>
-            <button class="btn ghost" type="submit">用参考填上空的字段</button>
-          </form>
-          <a class="linkbtn" href="/p/<%= problem.id %>/edit">去编辑页管理参考</a>
+          <a class="linkbtn" href="/p/<%= problem.id %>/edit#ai-ref">去编辑页生成 / 管理参考</a>
         </div>
       </div>
     </details>
@@ -240,9 +236,7 @@
           <% if (attemptShots[a.id] && attemptShots[a.id].length) { %>
             <div class="attempt-shots">
               <% attemptShots[a.id].forEach(function (shot) { %>
-                <a href="<%= shot.path %>" target="_blank" rel="noopener">
-                  <img src="<%= shot.path %>" alt="这条尝试的截图" loading="lazy">
-                </a>
+                <img src="<%= shot.path %>" alt="这条尝试的截图" loading="lazy" data-lightbox>
               <% }) %>
             </div>
           <% } %>
@@ -292,7 +286,7 @@
         <% artifacts.forEach(function (a) { %>
           <% if (a.kind === 'image') { %>
             <a class="shot" href="<%= a.path %>" target="_blank" rel="noopener">
-              <img src="<%= a.path %>" alt="<%= a.note || '截图' %>" loading="lazy">
+              <img src="<%= a.path %>" alt="<%= a.note || '截图' %>" loading="lazy" data-lightbox>
             </a>
           <% } else { %>
             <a class="link-item" href="<%= a.url %>" target="_blank" rel="noopener noreferrer">

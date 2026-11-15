@@ -1,6 +1,14 @@
 <%- include('partials/head') %>
 
 <section class="form-page">
+  <div class="edit-bar">
+    <a class="edit-back" href="/p/<%= problem.id %>" data-exit-to="/p/<%= problem.id %>">← 返回预览</a>
+    <div class="edit-bar-actions">
+      <a class="btn ghost" href="/p/<%= problem.id %>" data-exit-to="/p/<%= problem.id %>">取消</a>
+      <button class="btn" type="submit" form="problem-form">保存</button>
+    </div>
+  </div>
+
   <h1>编辑这张卡</h1>
 
   <form id="problem-form" class="stack-form" action="/p/<%= problem.id %>?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
@@ -12,20 +20,20 @@
     <div class="field">
       <label for="title">一句话问题 *</label>
       <input id="title" type="text" name="title" required maxlength="200" value="<%= problem.title %>">
-      <%- include('partials/shots', { shots: fieldShots.title, field: 'title', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.title, field: 'title', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
       <label for="error_text">报错原文</label>
       <textarea id="error_text" name="error_text" rows="6"><%= problem.error_text || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.error_text, field: 'error_text', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.error_text, field: 'error_text', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="row">
       <div class="field">
         <label for="context">场景 / 环境</label>
         <input id="context" type="text" name="context" maxlength="500" value="<%= problem.context || '' %>">
-        <%- include('partials/shots', { shots: fieldShots.context, field: 'context', problemId: problem.id }) %>
+        <%- include('partials/shots', { shots: fieldShots.context, field: 'context', problemId: problem.id, editable: true }) %>
       </div>
       <div class="field">
         <label for="tags">标签</label>
@@ -39,31 +47,34 @@
     <div class="field">
       <label for="q_what">是什么（现象 + 根因，一句话）</label>
       <textarea id="q_what" name="q_what" rows="2"><%= problem.q_what || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.q_what, field: 'q_what', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.q_what, field: 'q_what', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
       <label for="q_why">为什么（原理 / 权衡）</label>
       <textarea id="q_why" name="q_why" rows="4"><%= problem.q_why || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.q_why, field: 'q_why', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.q_why, field: 'q_why', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
       <label for="q_how">怎么做（可执行步骤）</label>
       <textarea id="q_how" name="q_how" rows="4"><%= problem.q_how || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.q_how, field: 'q_how', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.q_how, field: 'q_how', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
       <label for="q_plain">人话版（讲给完全不懂的人）</label>
       <textarea id="q_plain" name="q_plain" rows="2"><%= problem.q_plain || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.q_plain, field: 'q_plain', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.q_plain, field: 'q_plain', problemId: problem.id, editable: true }) %>
     </div>
 
-    <h2 class="form-section">AI 参考</h2>
+    <div class="section-head" id="ai-ref">
+      <h2 class="form-section">AI 参考</h2>
+      <button class="btn ghost" type="submit" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>保存并生成 AI 参考</button>
+    </div>
 
     <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
-      <div class="ai-ref" data-ai-ref id="ai-ref">
+      <div class="ai-ref" data-ai-ref>
         <p class="ai-ref-head">
           <span class="ai-badge">AI</span>
           参考答案 · 不是标准答案，只用来对照你想的对不对
@@ -84,15 +95,15 @@
         </div>
 
         <div class="ai-ref-actions">
-          <button class="btn ghost" type="submit" form="problem-form" name="action_ai" value="1">重新生成</button>
-          <button class="btn ghost" type="submit" form="problem-form" name="action_apply" value="1">用参考填上空的字段</button>
-          <button class="linkbtn danger" type="submit" form="problem-form" name="action_clear" value="1"
+          <button class="btn ghost" type="submit" name="action_ai" value="1">重新生成</button>
+          <button class="btn ghost" type="submit" name="action_apply" value="1">用参考填上空的字段</button>
+          <button class="linkbtn danger" type="submit" name="action_clear" value="1"
                   data-confirm="清空 AI 参考？会先保存你当前写的内容，再清掉 AI 那部分。">清空参考</button>
         </div>
       </div>
     <% } else { %>
       <p class="empty ai-empty">
-        还没有 AI 参考。写你自己的三问，保存时勾上「保存并生成 AI 参考」，
+        还没有 AI 参考。写你自己的三问，然后点右上「保存并生成 AI 参考」，
         它会以独立灰框出现——<strong>不会覆盖你写的内容</strong>。
       </p>
     <% } %>
@@ -102,7 +113,7 @@
     <div class="field">
       <label for="final_solution">最终方案（照做就行的那版）</label>
       <textarea id="final_solution" name="final_solution" rows="6"><%= problem.final_solution || '' %></textarea>
-      <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id }) %>
+      <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="row">
@@ -121,12 +132,7 @@
       </div>
     </div>
 
-    <div class="form-actions">
-      <button class="btn" type="submit">保存</button>
-      <button class="btn ghost" type="submit" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>保存并生成 AI 参考</button>
-      <a class="btn ghost" href="/p/<%= problem.id %>">取消</a>
-      <span class="hint">Ctrl+S 保存<% if (!aiEnabled) { %> · AI 未配置（.env 填 AI_API_KEY 后可用）<% } %></span>
-    </div>
+    <p class="hint edit-foot-hint">Ctrl+S 保存 · 返回预览前会问你保不保存</p>
   </form>
 </section>
 

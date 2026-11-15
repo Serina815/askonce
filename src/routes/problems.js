@@ -300,6 +300,12 @@ router.post(
       );
     }
 
+    // 「保存并返回预览」：编辑页顶部返回时如果选了保存
+    if (req.body.action_back === '1') {
+      req.session.flash = { type: 'ok', text: '已保存' };
+      return res.redirect(`/p/${id}`);
+    }
+
     // 编辑页的「AI 参考」：先保存当前内容，再生成一份独立参考，不碰你写的三问
     if (req.body.action_ai === '1') {
       const fresh = await loadProblem(id);

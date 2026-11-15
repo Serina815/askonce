@@ -1,13 +1,16 @@
 <%
   var list = typeof shots !== 'undefined' && shots ? shots : [];
+  var canEdit = typeof editable !== 'undefined' && editable;
 %>
 <% if (list.length) { %>
   <div class="paste-strip" data-strip data-field="<%= field %>">
     <% list.forEach(function (s) { %>
       <span class="paste-thumb">
-        <img src="<%= s.path %>" alt="截图" loading="lazy">
-        <button type="button" class="chip-x" title="删除这张截图"
-                data-delete-artifact data-id="<%= s.id %>" data-base="/p/<%= problemId %>/artifacts">×</button>
+        <img src="<%= s.path %>" alt="截图" loading="lazy" data-lightbox>
+        <% if (canEdit) { %>
+          <button type="button" class="chip-x" title="删除这张截图"
+                  data-delete-artifact data-id="<%= s.id %>" data-base="/p/<%= problemId %>/artifacts">×</button>
+        <% } %>
       </span>
     <% }) %>
   </div>
