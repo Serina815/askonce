@@ -711,6 +711,7 @@ details.add-attempt form textarea { margin-top: 10px; resize: vertical; }
 
 .shot-preview { margin-top: 10px; }
 .shot-preview img { max-width: 100%; max-height: 180px; border: 1px solid var(--line); border-radius: 3px; }
+.shot-preview .preview-note { margin: 6px 0 0; }
 
 /* ---------- 下一步 ---------- */
 .next-step {

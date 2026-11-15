@@ -27,7 +27,8 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
+        // blob: 是本地预览用的（粘贴/选图后 URL.createObjectURL）
+        imgSrc: ["'self'", 'data:', 'blob:'],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'none'"],
@@ -50,10 +51,11 @@ function mtimeOf(file) {
     return 0;
   }
 }
-const assetVersion = `${mtimeOf('style.css')}-${mtimeOf('app.js')}`;
+const assetVersion = () => `${mtimeOf('style.css')}-${mtimeOf('app.js')}`;
 
 app.use((req, res, next) => {
-  res.locals.assetV = assetVersion;
+  // 每次渲染现算（两次 stat，代价可忽略）：改完静态资源不必重启也能换 URL
+  res.locals.assetV = assetVersion();
   next();
 });
 

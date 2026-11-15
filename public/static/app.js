@@ -185,10 +185,10 @@
   /** 还没保存的卡片（秒记浮层 / 新建页）：把图塞进 file input，随表单一起提交 */
   function applyFile(form, files) {
     var input = form.querySelector('input[type="file"][name="shot"]');
-    if (!input) return;
+    if (!input || !files.length) return;
     try {
       var dt = new DataTransfer();
-      for (var i = 0; i < files.length; i += 1) dt.items.add(files[i]);
+      dt.items.add(files[0]); // 新卡只挂一张，多张等卡片建好再补
       input.files = dt.files;
     } catch (err) {
       return;
@@ -200,6 +200,11 @@
     img.src = URL.createObjectURL(files[0]);
     img.alt = '截图预览';
     preview.appendChild(img);
+
+    var note = document.createElement('p');
+    note.className = 'hint preview-note';
+    note.textContent = '已选 1 张 · 保存后随卡片一起上传';
+    preview.appendChild(note);
   }
 
   document.addEventListener('paste', function (event) {
@@ -211,8 +216,15 @@
     if (!form && capture && !capture.hidden) form = capture.querySelector('form');
 
     // 焦点不在表单里（比如刚点完页面空白处就按 Ctrl+V）：退回页面上的上传表单
-    if (!form || (!form.hasAttribute('data-paste-upload') && !form.hasAttribute('data-paste-file'))) {
-      form = document.querySelector('form[data-paste-upload]') || form;
+    if (!form) {
+      var pageForm = document.querySelector('form[data-paste-upload]');
+      if (!pageForm) {
+        var fileForms = Array.prototype.slice.call(document.querySelectorAll('form[data-paste-file]'));
+        pageForm = fileForms.filter(function (f) {
+          return !capture || !capture.contains(f);
+        })[0] || null;
+      }
+      form = pageForm;
     }
     if (!form) return;
 
