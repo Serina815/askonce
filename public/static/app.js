@@ -344,8 +344,14 @@
 
   document.addEventListener('submit', function (event) {
     var form = event.target.closest ? event.target.closest('form[data-confirm]') : null;
-    if (!form) return;
-    if (!window.confirm(form.getAttribute('data-confirm'))) event.preventDefault();
+    var message = form && form.getAttribute('data-confirm');
+
+    // 按钮自己带 data-confirm 时优先用它（同一个表单里有多个危险动作）
+    if (!message && event.submitter && event.submitter.dataset.confirm) {
+      message = event.submitter.dataset.confirm;
+    }
+    if (!message) return;
+    if (!window.confirm(message)) event.preventDefault();
   });
 
   // ---------- 提交中：按钮变「保存中…」，防连点 ----------

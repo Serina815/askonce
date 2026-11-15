@@ -63,7 +63,7 @@
     <h2 class="form-section">AI 参考</h2>
 
     <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
-      <div class="ai-ref" data-ai-ref>
+      <div class="ai-ref" data-ai-ref id="ai-ref">
         <p class="ai-ref-head">
           <span class="ai-badge">AI</span>
           参考答案 · 不是标准答案，只用来对照你想的对不对
@@ -84,9 +84,10 @@
         </div>
 
         <div class="ai-ref-actions">
-          <button class="btn ghost" type="submit" form="problem-form" name="action_ai" value="1" <%= aiEnabled ? '' : 'disabled title="未配置 AI_API_KEY"' %>>重新生成</button>
-          <button class="btn ghost" type="submit" form="ai-apply-form">用参考填上空的字段</button>
-          <button class="linkbtn danger" type="submit" form="ai-clear-form">清空参考</button>
+          <button class="btn ghost" type="submit" form="problem-form" name="action_ai" value="1">重新生成</button>
+          <button class="btn ghost" type="submit" form="problem-form" name="action_apply" value="1">用参考填上空的字段</button>
+          <button class="linkbtn danger" type="submit" form="problem-form" name="action_clear" value="1"
+                  data-confirm="清空 AI 参考？会先保存你当前写的内容，再清掉 AI 那部分。">清空参考</button>
         </div>
       </div>
     <% } else { %>
@@ -126,13 +127,6 @@
       <a class="btn ghost" href="/p/<%= problem.id %>">取消</a>
       <span class="hint">Ctrl+S 保存<% if (!aiEnabled) { %> · AI 未配置（.env 填 AI_API_KEY 后可用）<% } %></span>
     </div>
-  </form>
-
-  <form id="ai-apply-form" action="/p/<%= problem.id %>/ai-apply?_csrf=<%= csrfToken %>" method="post" hidden>
-    <input type="hidden" name="next" value="edit">
-  </form>
-  <form id="ai-clear-form" action="/p/<%= problem.id %>/ai-clear?_csrf=<%= csrfToken %>" method="post" data-confirm="清空 AI 参考？你自己写的三问不受影响。" hidden>
-    <input type="hidden" name="next" value="edit">
   </form>
 </section>
 

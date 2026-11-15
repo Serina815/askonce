@@ -309,6 +309,27 @@ router.post(
       } else {
         req.session.flash = { type: 'ok', text: '已保存，AI 参考已生成（灰框），可以对照你自己的答案。' };
       }
+      return res.redirect(`/p/${id}/edit#ai-ref`);
+    }
+
+    // 用参考填空白：同样先保存，避免丢掉刚写的内容
+    if (req.body.action_apply === '1') {
+      const fresh = await loadProblem(id);
+      const filled = await applyAiReference(fresh);
+      req.session.flash = filled
+        ? { type: 'ok', text: `已保存，并用参考填了 ${filled} 个空字段。记得改成自己的话。` }
+        : { type: 'warn', text: '已保存。三问都写过，没有被覆盖。' };
+      return res.redirect(`/p/${id}/edit#ai-ref`);
+    }
+
+    if (req.body.action_clear === '1') {
+      await run(
+        `UPDATE problems
+            SET ai_what = NULL, ai_why = NULL, ai_how = NULL, ai_model = NULL, ai_generated_at = NULL
+          WHERE id = ?`,
+        [id]
+      );
+      req.session.flash = { type: 'ok', text: '已保存并清空 AI 参考，你自己的三问没动。' };
       return res.redirect(`/p/${id}/edit`);
     }
 
