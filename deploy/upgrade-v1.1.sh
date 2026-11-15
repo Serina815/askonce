@@ -15,6 +15,12 @@ fi
 
 cd "$APP_DIR"
 
+# 出错时尽量把服务拉起来，别让站点一直躺着
+trap 'systemctl start "$SERVICE" >/dev/null 2>&1 || true' ERR
+
+echo "== 0/5 停服务 =="
+systemctl stop "$SERVICE" || true
+
 echo "== 1/5 备份数据库与上传目录 =="
 TS="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
@@ -31,10 +37,13 @@ else
   echo "已经迁移过，跳过"
 fi
 
-echo "== 3/5 修正权限 =="
+echo "== 3/5 修正权限与 SELinux 标签 =="
 chown -R askonce:askonce "$APP_DIR"
 find "$APP_DIR" -type d -exec chmod 755 {} \;
 find "$APP_DIR" -type f -exec chmod 644 {} \;
+if command -v restorecon >/dev/null 2>&1; then
+  restorecon -Rv "$APP_DIR" >/dev/null 2>&1 || true
+fi
 
 echo "== 4/5 重启服务 =="
 systemctl restart "$SERVICE"
