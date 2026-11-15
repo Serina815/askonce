@@ -125,6 +125,7 @@
     var img = document.createElement('img');
     img.src = path;
     img.alt = '截图';
+    img.setAttribute('data-lightbox', '');
     wrap.appendChild(img);
 
     var btn = document.createElement('button');
@@ -490,20 +491,37 @@
     if (event.defaultPrevented) return;
     var form = event.target;
     if (!form.hasAttribute('data-busy')) return;
+
     var btn = event.submitter || form.querySelector('button[type="submit"]');
     if (!btn) return;
-    if (btn.dataset.busy === '1') {
+
+    // 已经在提交中：拦住第二次
+    if (form.dataset.submitting === '1') {
       event.preventDefault();
       return;
     }
-    btn.dataset.busy = '1';
-    btn.dataset.label = btn.textContent;
+    form.dataset.submitting = '1';
+
+    // 关键：按钮一旦 disabled 就不会被提交，name/value 会丢
+    // （「保存并生成 AI 参考」这类带 name 的按钮必须先把值复制到隐藏域）
+    if (btn.name) {
+      var copy = document.createElement('input');
+      copy.type = 'hidden';
+      copy.name = btn.name;
+      copy.value = btn.value;
+      copy.setAttribute('data-busy-copy', '1');
+      form.appendChild(copy);
+    }
+
+    var label = btn.textContent;
     btn.textContent = '保存中…';
     btn.disabled = true;
     setTimeout(function () {
+      form.dataset.submitting = '';
       btn.disabled = false;
-      btn.textContent = btn.dataset.label || '保存';
-      btn.dataset.busy = '';
+      btn.textContent = label;
+      var stale = form.querySelector('[data-busy-copy]');
+      if (stale) stale.remove();
     }, 8000);
   });
 

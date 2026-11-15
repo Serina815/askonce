@@ -246,12 +246,16 @@ router.get(
       [problem.id]
     );
     const fieldShots = {};
+    const looseShots = [];
     for (const art of artifacts) {
-      if (!art.field) continue;
+      if (!art.field) {
+        looseShots.push(art);
+        continue;
+      }
       (fieldShots[art.field] = fieldShots[art.field] || []).push(art);
     }
 
-    return res.render('edit', { title: `编辑：${problem.title}`, problem, fieldShots });
+    return res.render('edit', { title: `编辑：${problem.title}`, problem, fieldShots, looseShots });
   })
 );
 

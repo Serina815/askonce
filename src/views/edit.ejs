@@ -132,6 +132,14 @@
       </div>
     </div>
 
+    <% if (looseShots && looseShots.length) { %>
+      <div class="section-head">
+        <h2 class="form-section">其它截图</h2>
+        <span class="hint">没有绑定到具体字段（旧数据 / 整卡附件）</span>
+      </div>
+      <%- include('partials/shots', { shots: looseShots, field: '', problemId: problem.id, editable: true }) %>
+    <% } %>
+
     <p class="hint edit-foot-hint">Ctrl+S 保存 · 返回预览前会问你保不保存</p>
   </form>
 </section>
