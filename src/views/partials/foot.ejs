@@ -14,15 +14,13 @@
       <button type="button" class="linkbtn" data-close-capture>关闭 Esc</button>
     </div>
     <input class="capture-title" type="text" name="title" id="capture-title" placeholder="一句话：卡在哪儿？" required maxlength="200" autocomplete="off">
-    <textarea name="error_text" rows="4" placeholder="把报错原文粘进来（Ctrl+V 可以直接贴截图）"></textarea>
+    <textarea name="error_text" rows="4" placeholder="粘贴报错原文"></textarea>
     <div class="capture-row">
-      <input type="text" name="tags" placeholder="标签，逗号分隔：nginx,权限" maxlength="255">
+      <input type="text" name="tags" placeholder="标签" maxlength="255">
     </div>
     <input type="file" name="shot" id="capture-shot" accept="image/*" class="hidden-file">
     <div class="shot-preview" id="shot-preview" data-file-preview></div>
     <div class="capture-actions">
-      <span class="hint">先记下来，方案和「为什么」之后补。</span>
-      <span class="hint">Ctrl/⌘ + Enter 保存</span>
       <button type="submit" class="btn">保存</button>
     </div>
   </form>

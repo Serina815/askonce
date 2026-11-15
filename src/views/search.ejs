@@ -12,7 +12,6 @@
 <section class="hero small">
   <p class="kicker">搜索</p>
   <h1><%= q ? '“' + q + '”' : '搜一张卡' %></h1>
-  <p class="hero-sub">按报错原文找最准 —— 再踩同一个坑时，你手上只有一段报错。</p>
 </section>
 
 <form class="search-form" action="/search" method="get">
@@ -22,7 +21,7 @@
 
 <% if (q && !problems.length) { %>
   <div class="empty-state">
-    <p class="empty">没有匹配的卡。也许是第一次遇到——按 <kbd>N</kbd> 记下来。</p>
+    <p class="empty">没有匹配的卡。</p>
     <button type="button" class="btn" data-open-capture>记一个问题</button>
   </div>
 <% } %>

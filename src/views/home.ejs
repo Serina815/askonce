@@ -13,7 +13,6 @@
   <div class="hero-main">
     <p class="kicker">全部</p>
     <h1><%= dueCount %> 张该复盘</h1>
-    <p class="hero-sub">记录 → 补三问 → 复盘。数字都在「统计」里。</p>
   </div>
   <div class="hero-actions">
     <% if (dueCount) { %>
@@ -35,7 +34,7 @@
 
   <% if (!cards.length) { %>
     <div class="empty-state">
-      <p class="empty">还没有卡片。下次卡住的时候按 <kbd>N</kbd>，5 秒记一张。</p>
+      <p class="empty">还没有卡片。</p>
       <button type="button" class="btn" data-open-capture>记第一个问题</button>
     </div>
   <% } else { %>

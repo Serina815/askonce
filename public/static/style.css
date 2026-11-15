@@ -679,6 +679,7 @@ textarea { resize: vertical; }
 .review-meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
 .review-code { max-height: 220px; overflow: auto; }
 .review-prompt { margin: 18px 0 12px; color: var(--muted); font-size: 14px; }
+.review-card [data-reveal] { margin-top: 22px; }
 
 .review-answer { margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--line); }
 .answer-title { margin: 18px 0 8px; font-size: 13px; letter-spacing: 2px; color: var(--accent); }

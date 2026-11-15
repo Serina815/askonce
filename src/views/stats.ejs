@@ -7,7 +7,6 @@
 <section class="hero small">
   <p class="kicker">统计</p>
   <h1>你在变强吗</h1>
-  <p class="hero-sub">自主解决率、复发次数、薄弱标签 —— 三个能说谎最少的数字。本月与累计分开列，不混着看。</p>
   <p class="stat-strip">共 <%= totalCards %> 张卡 · 待整理 <%= counts.draft %> · 待复盘 <%= counts.solved %> · 已掌握 <%= counts.mastered %> · 已归档 <%= counts.archived %></p>
 </section>
 
@@ -31,7 +30,7 @@
 </section>
 
 <section class="panel">
-  <div class="panel-head"><h2>复发次数（近 8 周）</h2><span class="hint">越往右越少，是好事</span></div>
+  <div class="panel-head"><h2>近 8 周复发次数</h2></div>
   <div class="bars">
     <% weeks.forEach(function (w) { %>
       <div class="bar-item">
@@ -44,7 +43,7 @@
 
 <% if (weakTags.length) { %>
   <section class="panel">
-    <div class="panel-head"><h2>薄弱标签</h2><span class="hint">近 90 天复盘失败率</span></div>
+    <div class="panel-head"><h2>薄弱标签</h2></div>
     <ul class="weak">
       <% weakTags.forEach(function (t) { %>
         <li>
@@ -59,7 +58,7 @@
 
 <% if (topRecurring.length) { %>
   <section class="panel">
-    <div class="panel-head"><h2>复发最多的卡</h2><span class="hint">优先攻克它们</span></div>
+    <div class="panel-head"><h2>复发最多的卡</h2></div>
     <ul class="cards">
       <% topRecurring.forEach(function (p) { %>
         <li class="card is-<%= p.status %>">

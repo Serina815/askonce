@@ -2,24 +2,23 @@
 
 <section class="form-page">
   <h1>记一个问题</h1>
-  <p class="hint">现在只需要写清楚"卡在哪儿"。方案和三问，解决之后再补。</p>
 
   <form class="stack-form" action="/problems?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data"
         data-busy data-paste-file>
     <div class="field">
       <label for="title">一句话问题 *</label>
-      <input id="title" type="text" name="title" required maxlength="200" autofocus placeholder="例：Docker 构建时 npm ci 报 EACCES">
+      <input id="title" type="text" name="title" required maxlength="200" autofocus placeholder="Docker 构建时 npm ci 报 EACCES">
     </div>
 
     <div class="field">
       <label for="error_text">报错原文</label>
-      <textarea id="error_text" name="error_text" rows="6" placeholder="原样粘贴。这段文字以后会用来匹配「又遇到了」。"></textarea>
+      <textarea id="error_text" name="error_text" rows="6" placeholder="粘贴报错原文"></textarea>
     </div>
 
     <div class="row">
       <div class="field">
         <label for="context">场景 / 环境</label>
-        <input id="context" type="text" name="context" maxlength="500" placeholder="例：CentOS 9 · Node 22 · 用 npm ci">
+        <input id="context" type="text" name="context" maxlength="500" placeholder="CentOS 9 · Node 22">
       </div>
       <div class="field">
         <label for="tags">标签</label>
@@ -31,13 +30,11 @@
       <label for="shot">截图</label>
       <input id="shot" type="file" name="shot" accept="image/*">
       <div class="shot-preview" data-file-preview></div>
-      <p class="hint">支持 JPG / PNG，单张不超过 8MB。也可以直接 Ctrl+V 粘贴截图。</p>
     </div>
 
     <div class="form-actions">
       <button class="btn" type="submit">保存</button>
       <a class="btn ghost" href="/">取消</a>
-      <span class="hint">Ctrl+S 保存 · 只有第一行必填</span>
     </div>
   </form>
 </section>

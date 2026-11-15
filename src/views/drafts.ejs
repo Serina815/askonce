@@ -3,13 +3,12 @@
 <section class="hero small">
   <p class="kicker">待整理</p>
   <h1><%= drafts.length %> 张等着补三问</h1>
-  <p class="hero-sub">记录只是入口。补上「是什么 / 怎么解 / 为什么」，它才会变成能复习的卡。</p>
 </section>
 
 <% if (!drafts.length) { %>
   <section class="empty-page">
-    <p class="empty">没有待整理的卡。要么你整理得很勤，要么最近没怎么记。</p>
-    <p><a class="btn" href="/">回今天</a></p>
+    <p class="empty">没有待整理的卡。</p>
+    <p><a class="btn" href="/">回全部</a></p>
   </section>
 <% } else { %>
   <ul class="cards">
@@ -31,8 +30,6 @@
       </li>
     <% }) %>
   </ul>
-
-  <p class="hint" style="margin-top: 18px;">补完三问、写下最终方案，就可以「标记已解决」进复盘队列。</p>
 <% } %>
 
 <%- include('partials/foot') %>

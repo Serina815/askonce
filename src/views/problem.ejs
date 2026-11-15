@@ -19,7 +19,6 @@
 <% if (duplicates && duplicates.length) { %>
 <section class="dup">
   <p class="dup-kicker">可能重复</p>
-  <p class="dup-lead">这张卡看起来像你以前记过的问题。如果是同一个坑，合并过去就行。</p>
   <ul class="dup-list">
     <% duplicates.forEach(function (d) { %>
       <li class="dup-item">
@@ -31,7 +30,6 @@
       </li>
     <% }) %>
   </ul>
-  <p class="hint">不是同一个问题？忽略这条提示就行，它只出现这一次。</p>
 </section>
 <% } %>
 
@@ -39,7 +37,6 @@
   <div class="preview-bar">
     <div class="preview-left">
       <a class="edit-back" href="/">← 全部</a>
-      <span class="preview-flag">只读预览 · 修改请点编辑</span>
     </div>
     <div class="preview-actions">
       <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
@@ -74,7 +71,6 @@
       <p class="next-kicker">状态</p>
       <div class="next-main">
         <p class="next-title">已归档</p>
-        <p class="next-hint">这张卡不再进入复盘队列。想重新用，编辑后标记已解决即可。</p>
       </div>
     </section>
   <% } else if (problem.status === 'draft' && !hasSolution) { %>
@@ -82,7 +78,6 @@
       <p class="next-kicker">下一步</p>
       <div class="next-main">
         <p class="next-title">还差一步：把三问补上</p>
-        <p class="next-hint">是什么 / 怎么解 / 为什么。AI 可以给草稿，但最后要用自己的话改一遍。</p>
       </div>
       <a class="btn" href="/p/<%= problem.id %>/edit">去补三问</a>
     </section>
@@ -91,7 +86,6 @@
       <p class="next-kicker">下一步</p>
       <div class="next-main">
         <p class="next-title">方案有了，可以标记解决</p>
-        <p class="next-hint">标记后进入复盘队列，明天第一次复盘——解决不是终点。</p>
       </div>
       <form action="/p/<%= problem.id %>/solve?_csrf=<%= csrfToken %>" method="post" data-busy>
         <button class="btn" type="submit">标记已解决</button>
@@ -102,7 +96,6 @@
       <p class="next-kicker">下一步</p>
       <div class="next-main">
         <p class="next-title">今天该复盘这张</p>
-        <p class="next-hint">先别翻答案，自己想 30 秒，再点「看答案」自评。</p>
       </div>
       <a class="btn" href="/review">去复盘</a>
     </section>
@@ -111,7 +104,6 @@
       <p class="next-kicker">状态</p>
       <div class="next-main">
         <p class="next-title"><%= problem.status === 'mastered' ? '已掌握' : '等待下次复盘' %></p>
-        <p class="next-hint">下次复盘：<%= problem.next_review_on || '—' %></p>
       </div>
       <form action="/p/<%= problem.id %>/recur?_csrf=<%= csrfToken %>" method="post" data-confirm="记一次复发？掌握度会 -1，下次复盘提到今天。" data-busy>
         <button class="btn ghost" type="submit">又遇到了</button>
@@ -144,10 +136,7 @@
     </div>
 
     <% if (!problem.q_what && !problem.q_how && !problem.q_why && !problem.q_plain) { %>
-      <p class="empty">
-        还没写。可以自己用三句话想清楚，也可以点上面的「生成 AI 参考」拿一份对照——
-        但最后一定要改写成你自己的话。
-      </p>
+      <p class="empty">还没写。</p>
     <% } else { %>
       <div class="qa">
         <div class="qa-item">
@@ -177,22 +166,21 @@
   <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
     <details class="block ai-ref-block">
       <summary>
-        <span class="ai-badge">AI</span>
-        参考答案（不是你的答案，点开对照）
+        <span class="ai-badge">AI</span> 参考答案
         <span class="ai-meta"><%= problem.ai_model || 'AI' %></span>
       </summary>
       <div class="ai-ref">
         <div class="ai-block">
           <h3>是什么</h3>
-          <p class="pre-wrap"><%= problem.ai_what || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_what || '—' %></p>
         </div>
         <div class="ai-block">
           <h3>为什么</h3>
-          <p class="pre-wrap"><%= problem.ai_why || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_why || '—' %></p>
         </div>
         <div class="ai-block">
           <h3>怎么做</h3>
-          <p class="pre-wrap"><%= problem.ai_how || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_how || '—' %></p>
         </div>
         <div class="ai-ref-actions">
           <a class="linkbtn" href="/p/<%= problem.id %>/edit#ai-ref">去编辑页生成 / 管理参考</a>
@@ -208,9 +196,6 @@
         <button type="button" class="linkbtn" data-copy="final-solution">复制</button>
       </div>
       <pre class="code" id="final-solution"><%= problem.final_solution %></pre>
-      <p class="hint">
-        解决方式：<%= problem.source === 'self' ? '自己想的' : problem.source === 'ai' ? 'AI 给的' : problem.source === 'doc' ? '查文档' : problem.source === 'mixed' ? '混合' : '未标注' %>
-      </p>
       <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id }) %>
     </section>
   <% } %>
@@ -221,7 +206,7 @@
     </div>
 
     <% if (!attempts.length) { %>
-      <p class="empty">还没有尝试。把 AI 给的方案、文档里找到的做法都记下来，包括没用的那些。</p>
+      <p class="empty">还没有尝试。</p>
     <% } %>
 
     <ol class="timeline">
@@ -269,11 +254,9 @@
             <option value="unknown">未验证</option>
           </select>
         </div>
-        <textarea name="solution" rows="4" required placeholder="把方案贴进来。无效的方案也要记——它会告诉你 AI 在哪儿不靠谱。"></textarea>
-        <p class="hint">Ctrl+V 可粘贴截图，会跟着这条尝试保存</p>
+        <textarea name="solution" rows="4" required placeholder="把方案贴进来。"></textarea>
         <div class="form-foot">
           <button class="btn" type="submit">保存尝试</button>
-          <span class="hint">截图会跟着这条尝试一起保存</span>
         </div>
       </form>
     </details>
@@ -306,7 +289,7 @@
       <form action="/p/<%= problem.id %>/artifacts?_csrf=<%= csrfToken %>" method="post">
         <div class="row">
           <input type="url" name="url" placeholder="https://…" required maxlength="1000">
-          <input type="text" name="note" placeholder="备注（可空）" maxlength="255">
+          <input type="text" name="note" placeholder="备注" maxlength="255">
         </div>
         <button class="btn" type="submit">添加</button>
       </form>

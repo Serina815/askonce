@@ -114,7 +114,7 @@ app.use('/', require('./routes/admin'));
 app.use((req, res) => {
   res.status(404).render('error', {
     title: '没有这个页面',
-    message: '这里什么都没有，回今天看看。',
+    message: '这里什么都没有，回全部看看。',
     status: 404,
   });
 });

@@ -42,28 +42,27 @@
     </div>
 
     <h2 class="form-section">三问</h2>
-    <p class="hint form-section-hint">先自己想清楚，再往下看 AI 参考。顺序是：是什么 → 为什么 → 怎么做。</p>
 
     <div class="field">
-      <label for="q_what">是什么（现象 + 根因，一句话）</label>
+      <label for="q_what">是什么</label>
       <textarea id="q_what" name="q_what" rows="2"><%= problem.q_what || '' %></textarea>
       <%- include('partials/shots', { shots: fieldShots.q_what, field: 'q_what', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
-      <label for="q_why">为什么（原理 / 权衡）</label>
+      <label for="q_why">为什么</label>
       <textarea id="q_why" name="q_why" rows="4"><%= problem.q_why || '' %></textarea>
       <%- include('partials/shots', { shots: fieldShots.q_why, field: 'q_why', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
-      <label for="q_how">怎么做（可执行步骤）</label>
+      <label for="q_how">怎么做</label>
       <textarea id="q_how" name="q_how" rows="4"><%= problem.q_how || '' %></textarea>
       <%- include('partials/shots', { shots: fieldShots.q_how, field: 'q_how', problemId: problem.id, editable: true }) %>
     </div>
 
     <div class="field">
-      <label for="q_plain">人话版（讲给完全不懂的人）</label>
+      <label for="q_plain">人话版</label>
       <textarea id="q_plain" name="q_plain" rows="2"><%= problem.q_plain || '' %></textarea>
       <%- include('partials/shots', { shots: fieldShots.q_plain, field: 'q_plain', problemId: problem.id, editable: true }) %>
     </div>
@@ -76,22 +75,21 @@
     <% if (problem.ai_what || problem.ai_why || problem.ai_how) { %>
       <div class="ai-ref" data-ai-ref>
         <p class="ai-ref-head">
-          <span class="ai-badge">AI</span>
-          参考答案 · 不是标准答案，只用来对照你想的对不对
+          <span class="ai-badge">AI</span> 参考答案
           <% if (problem.ai_model) { %><span class="ai-meta"><%= problem.ai_model %> · <%= String(problem.ai_generated_at || '').slice(0, 16) %></span><% } %>
         </p>
 
         <div class="ai-block">
           <h3>是什么</h3>
-          <p class="pre-wrap"><%= problem.ai_what || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_what || '—' %></p>
         </div>
         <div class="ai-block">
           <h3>为什么</h3>
-          <p class="pre-wrap"><%= problem.ai_why || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_why || '—' %></p>
         </div>
         <div class="ai-block">
           <h3>怎么做</h3>
-          <p class="pre-wrap"><%= problem.ai_how || '（没生成）' %></p>
+          <p class="pre-wrap"><%= problem.ai_how || '—' %></p>
         </div>
 
         <div class="ai-ref-actions">
@@ -102,16 +100,13 @@
         </div>
       </div>
     <% } else { %>
-      <p class="empty ai-empty">
-        还没有 AI 参考。写你自己的三问，然后点右上「保存并生成 AI 参考」，
-        它会以独立灰框出现——<strong>不会覆盖你写的内容</strong>。
-      </p>
+      <p class="empty ai-empty">还没有 AI 参考。</p>
     <% } %>
 
     <h2 class="form-section">结论</h2>
 
     <div class="field">
-      <label for="final_solution">最终方案（照做就行的那版）</label>
+      <label for="final_solution">最终方案</label>
       <textarea id="final_solution" name="final_solution" rows="6"><%= problem.final_solution || '' %></textarea>
       <%- include('partials/shots', { shots: fieldShots.final_solution, field: 'final_solution', problemId: problem.id, editable: true }) %>
     </div>
@@ -129,8 +124,7 @@
       <div class="field">
         <label for="shot-file">补充截图</label>
         <div class="file-pick">
-          <button type="button" class="btn ghost" data-pick-file="shot-file">选择图片（可多选）</button>
-          <span class="hint">选完立即上传，可预览、可单张删除；也可以 Ctrl+V 粘到任意字段</span>
+          <button type="button" class="btn ghost" data-pick-file="shot-file">选择图片</button>
         </div>
         <input id="shot-file" type="file" accept="image/*" multiple class="visually-hidden" data-upload-file>
       </div>
@@ -139,12 +133,9 @@
     <% if (looseShots && looseShots.length) { %>
       <div class="section-head">
         <h2 class="form-section">其它截图</h2>
-        <span class="hint">没有绑定到具体字段（旧数据 / 整卡附件）</span>
       </div>
       <%- include('partials/shots', { shots: looseShots, field: '', problemId: problem.id, editable: true }) %>
     <% } %>
-
-    <p class="hint edit-foot-hint">Ctrl+S 保存 · 返回预览前会问你保不保存</p>
   </form>
 </section>
 
