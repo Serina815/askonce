@@ -39,10 +39,10 @@
   <div class="preview-bar">
     <span class="preview-flag">只读预览 · 修改请点编辑</span>
     <div class="preview-actions">
-      <a class="btn" href="/p/<%= problem.id %>/edit">编辑</a>
       <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
         <button class="linkbtn danger" type="submit">删除</button>
       </form>
+      <a class="btn" href="/p/<%= problem.id %>/edit">编辑</a>
     </div>
   </div>
 

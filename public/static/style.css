@@ -77,7 +77,9 @@ code, kbd { font-family: var(--mono); }
   border-radius: 3px;
   background: var(--ink);
   color: var(--paper);
+  font-family: inherit;
   font-size: 14px;
+  line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.12s ease, background 0.12s ease;
@@ -506,7 +508,8 @@ details.add-attempt form textarea { margin-top: 10px; resize: vertical; }
 .history a:hover { color: var(--accent); }
 
 /* ---------- 表单 ---------- */
-.form-page { max-width: 720px; }
+/* 与 .main 同宽：预览页的「编辑」和编辑页的「保存」必须落在同一条右边缘上 */
+.form-page { max-width: 940px; }
 
 .form-page h1 {
   margin: 0 0 6px;
