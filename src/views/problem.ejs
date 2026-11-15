@@ -37,7 +37,10 @@
 
 <article class="problem">
   <div class="preview-bar">
-    <span class="preview-flag">只读预览 · 修改请点编辑</span>
+    <div class="preview-left">
+      <a class="edit-back" href="/">← 全部</a>
+      <span class="preview-flag">只读预览 · 修改请点编辑</span>
+    </div>
     <div class="preview-actions">
       <form action="/p/<%= problem.id %>/delete?_csrf=<%= csrfToken %>" method="post" data-confirm="删除这张卡？尝试记录和截图会一起删除。">
         <button class="linkbtn danger" type="submit">删除</button>

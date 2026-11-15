@@ -70,11 +70,20 @@
     return tip;
   }
 
-  /** 找到（必要时创建）某个字段下方的缩略图条 */
-  function stripFor(form, field) {
+  /** 找到（必要时创建）缩略图条：优先按字段，其次挂在指定元素后面 */
+  function stripFor(form, field, anchorEl) {
     if (field) {
       var found = form.querySelector('.paste-strip[data-field="' + field + '"]');
       if (found) return found;
+    }
+
+    var anchor = anchorEl || null;
+    var next = anchor && anchor.nextElementSibling;
+    if (next && next.classList && next.classList.contains('paste-strip')) return next;
+
+    if (!anchor && field) {
+      var input = form.querySelector('[name="' + field + '"]');
+      anchor = input ? input.closest('.field') || input : null;
     }
 
     var strip = document.createElement('div');
@@ -82,18 +91,15 @@
     strip.setAttribute('data-strip', '');
     if (field) strip.setAttribute('data-field', field);
 
-    var input = field ? form.querySelector('[name="' + field + '"]') : null;
-    var anchor = input ? input.closest('.field') || input : null;
-
     if (anchor && anchor.parentNode) {
-      anchor.parentNode.insertBefore(strip, anchor.nextSibling);
+      anchor.insertAdjacentElement('afterend', strip);
     } else {
       var actions = form.querySelector('.form-actions') || form.querySelector('.form-foot');
       if (actions && actions.parentNode) actions.parentNode.insertBefore(strip, actions);
       else form.appendChild(strip);
     }
 
-    tipOf(strip).textContent = 'Ctrl+V 可粘贴截图';
+    tipOf(strip).textContent = field ? 'Ctrl+V 可粘贴截图' : '可以多选，选完自动上传';
     return strip;
   }
 
@@ -141,12 +147,12 @@
     return wrap;
   }
 
-  function uploadPaste(form, file, field) {
+  function uploadPaste(form, file, field, anchorEl) {
     var url = form.getAttribute('data-paste-upload');
     var base = form.getAttribute('data-artifact-base');
-    if (!url || !base) return;
+    if (!url || !base) return Promise.resolve();
 
-    var strip = stripFor(form, field);
+    var strip = stripFor(form, field, anchorEl);
     var tip = tipOf(strip);
     tip.textContent = '上传中…';
 
@@ -154,7 +160,7 @@
     fd.append('shot', file, 'paste.png');
     if (field) fd.append('field', field);
 
-    fetch(url, {
+    return fetch(url, {
       method: 'POST',
       body: fd,
       headers: { 'x-csrf-token': CSRF },
@@ -168,10 +174,11 @@
       .then(function (data) {
         if (!data || !data.ok) throw new Error((data && data.error) || '上传失败');
         strip.insertBefore(makeThumb(data.path, data.id, base), tip);
-        tip.textContent = '已添加 · 保存后可见';
+        var count = strip.querySelectorAll('.paste-thumb').length;
+        tip.textContent = '已添加 ' + count + ' 张 · 保存后可见';
       })
       .catch(function (err) {
-        tip.textContent = '粘贴失败：' + err.message + '（可以改用「补充截图」）';
+        tip.textContent = '上传失败：' + err.message;
       });
   }
 
@@ -223,6 +230,34 @@
       if (details && !details.open) details.open = true;
       uploadPaste(form, files[0], field);
     }
+  });
+
+  // ---------- 选择文件（可多选，选完逐张上传并预览） ----------
+
+  document.addEventListener('click', function (event) {
+    var pick = event.target.closest && event.target.closest('[data-pick-file]');
+    if (!pick) return;
+    var input = document.getElementById(pick.getAttribute('data-pick-file'));
+    if (input) input.click();
+  });
+
+  document.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input.hasAttribute || !input.hasAttribute('data-upload-file')) return;
+
+    var form = input.closest('form');
+    var files = Array.prototype.slice.call(input.files || []);
+    input.value = '';
+    if (!form || !files.length) return;
+
+    var anchor = input.closest('.field') || input;
+
+    (function next(i) {
+      if (i >= files.length) return;
+      uploadPaste(form, files[i], null, anchor).then(function () {
+        next(i + 1);
+      });
+    })(0);
   });
 
   // 已经保存过的截图：点 × 直接删

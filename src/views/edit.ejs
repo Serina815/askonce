@@ -127,8 +127,12 @@
         </select>
       </div>
       <div class="field">
-        <label for="shot">补充截图（文件）</label>
-        <input id="shot" type="file" name="shot" accept="image/*">
+        <label for="shot-file">补充截图</label>
+        <div class="file-pick">
+          <button type="button" class="btn ghost" data-pick-file="shot-file">选择图片（可多选）</button>
+          <span class="hint">选完立即上传，可预览、可单张删除；也可以 Ctrl+V 粘到任意字段</span>
+        </div>
+        <input id="shot-file" type="file" accept="image/*" multiple class="visually-hidden" data-upload-file>
       </div>
     </div>
 
