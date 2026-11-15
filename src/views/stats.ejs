@@ -7,13 +7,13 @@
 <section class="hero small">
   <p class="kicker">统计</p>
   <h1>你在变强吗</h1>
-  <p class="hero-sub">自主解决率、复发次数、薄弱标签 —— 三个能说谎最少的数字。</p>
+  <p class="hero-sub">自主解决率、复发次数、薄弱标签 —— 三个能说谎最少的数字。这里的解决率是<b>累计</b>口径，首页那个是<b>本月</b>。</p>
 </section>
 
 <section class="metrics four">
   <div class="metric">
     <span class="metric-num"><%= selfRate === null ? '—' : selfRate + '%' %></span>
-    <span class="metric-label">自主解决率</span>
+    <span class="metric-label">累计自主解决率</span>
   </div>
   <div class="metric">
     <span class="metric-num"><%= total %></span>
@@ -61,7 +61,7 @@
     <div class="panel-head"><h2>复发最多的卡</h2><span class="hint">优先攻克它们</span></div>
     <ul class="cards">
       <% topRecurring.forEach(function (p) { %>
-        <li class="card">
+        <li class="card is-<%= p.status %>">
           <a class="card-main" href="/p/<%= p.id %>">
             <span class="card-title"><%= p.title %></span>
             <span class="card-meta"><span class="chip recur">复发 <%= p.recurrence_count %> 次</span></span>

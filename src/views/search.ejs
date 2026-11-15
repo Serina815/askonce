@@ -21,13 +21,16 @@
 </form>
 
 <% if (q && !problems.length) { %>
-  <p class="empty">没有匹配的卡。也许是第一次遇到——按 <kbd>N</kbd> 记下来。</p>
+  <div class="empty-state">
+    <p class="empty">没有匹配的卡。也许是第一次遇到——按 <kbd>N</kbd> 记下来。</p>
+    <button type="button" class="btn" data-open-capture>记一个问题</button>
+  </div>
 <% } %>
 
 <% if (problems.length) { %>
   <ul class="cards">
     <% problems.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
-      <li class="card">
+      <li class="card is-<%= p.status %>">
         <a class="card-main" href="/p/<%= p.id %>">
           <span class="card-title"><%= p.title %></span>
           <span class="card-meta">

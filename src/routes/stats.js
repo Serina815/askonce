@@ -78,7 +78,7 @@ router.get(
       .slice(0, 6);
 
     const topRecurring = await all(
-      `SELECT id, title, recurrence_count, mastery
+      `SELECT id, title, status, recurrence_count, mastery
          FROM problems
         WHERE recurrence_count > 0
         ORDER BY recurrence_count DESC, mastery ASC

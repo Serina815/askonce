@@ -11,6 +11,27 @@
   --serif: "Songti SC", "Noto Serif CJK SC", Georgia, serif;
   --sans: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
   --mono: "JetBrains Mono", "Cascadia Code", Consolas, "Noto Sans Mono CJK SC", monospace;
+
+  /* 间距 / 圆角 / 字号 / 状态色：统一走 token，避免散落的魔法值 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius: 3px;
+  --radius-lg: 4px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --status-draft: #b08a3e;
+  --status-solved: #a9761d;
+  --status-mastered: #3f7a52;
+  --status-archived: #a89b86;
+  --focus-ring: rgba(184, 65, 47, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -26,6 +47,19 @@ body {
 
 a { color: inherit; }
 code, kbd { font-family: var(--mono); }
+
+/* 键盘焦点：产品主打键盘操作，Tab 走一遍必须看得见 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 
 /* ---------- 顶栏 ---------- */
 .topbar {
@@ -51,8 +85,18 @@ code, kbd { font-family: var(--mono); }
 .brand .dot { color: var(--accent); }
 
 .nav { display: flex; gap: 18px; font-size: 14px; }
-.nav a { text-decoration: none; color: var(--muted); }
+.nav a { text-decoration: none; color: var(--muted); position: relative; padding-bottom: 2px; }
 .nav a.on, .nav a:hover { color: var(--ink); }
+.nav a.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
 
 .inline-form { display: inline; margin: 0; }
 
@@ -253,6 +297,8 @@ kbd {
 }
 
 .empty { color: var(--muted); font-size: 14px; }
+.empty-state { padding: 26px 0 10px; }
+.empty-state .empty { margin: 0 0 14px; }
 .hint { color: var(--muted); font-size: 12px; }
 .muted { color: var(--muted); font-size: 12px; }
 .count { font-size: 12px; color: var(--muted); font-weight: 400; }
@@ -273,6 +319,12 @@ kbd {
 }
 
 .card:hover { border-color: var(--ink); transform: translateX(2px); }
+
+/* 列表左侧边条承载状态色：扫一眼就知道哪些是待整理、哪些待复盘 */
+.card.is-draft { border-left-color: var(--status-draft); }
+.card.is-solved { border-left-color: var(--status-solved); }
+.card.is-mastered { border-left-color: var(--status-mastered); }
+.card.is-archived { border-left-color: var(--status-archived); }
 
 .card-main { flex: 1; text-decoration: none; min-width: 0; }
 
@@ -532,21 +584,37 @@ details.add-attempt form textarea { margin-top: 10px; resize: vertical; }
 .field { margin-bottom: 16px; }
 .field label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
 
-.field input, .field textarea, .field select,
-.row input, .row select,
-.add-attempt textarea,
-.note-form input {
+/* 表单控件统一由标签决定，不再按容器结构写白名单选择器（漏一个就"没样式"） */
+input[type="text"],
+input[type="url"],
+input[type="search"],
+input[type="password"],
+input[type="email"],
+textarea,
+select {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: #fff;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--ink);
 }
 
-.field textarea { resize: vertical; }
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  outline: 2px solid rgba(184, 65, 47, 0.18);
+  outline-offset: 0;
+}
+
+textarea { resize: vertical; }
 
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 
@@ -612,6 +680,22 @@ details.add-attempt form textarea { margin-top: 10px; resize: vertical; }
 
 .review-links { margin-top: 18px; }
 .review-links a { color: var(--muted); }
+
+/* ---------- 复盘专注模式 ---------- */
+body.focus .topbar,
+body.focus .footer { display: none; }
+
+body.focus .main { max-width: 760px; padding: 64px 22px 48px; }
+
+body.focus .review-card {
+  padding: 42px 46px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 46px rgba(60, 45, 20, 0.09);
+}
+
+body.focus .review-card h1 { font-size: 34px; letter-spacing: 1px; }
+body.focus .review-top { margin-bottom: 22px; }
+body.focus .review-prompt { font-size: 15px; }
 
 /* ---------- 统计 ---------- */
 .bars {
@@ -977,4 +1061,12 @@ details.add-attempt form textarea { margin-top: 10px; resize: vertical; }
   .problem-head { flex-direction: column; }
   .problem-actions { justify-content: flex-start; }
   .footer { flex-direction: column; }
+
+  .preview-bar, .edit-bar { flex-wrap: wrap; row-gap: 6px; }
+  .preview-left { width: 100%; }
+  .preview-actions, .edit-bar-actions { width: 100%; justify-content: flex-end; }
+  .btn { padding: 9px 14px; }
+  .form-actions { flex-wrap: wrap; }
+  body.focus .review-card { padding: 26px 20px; }
+  body.focus .main { padding: 32px 14px 32px; }
 }

@@ -33,6 +33,7 @@ router.get(
 
     return res.render('review', {
       title: '复盘',
+      bodyClass: 'focus',
       problem,
       remaining: Number(remaining.c) || 0,
       reviewedToday,

@@ -15,7 +15,7 @@
     <h1><%= dueCount %> 张该复盘</h1>
     <p class="hero-sub">
       <% if (draftCount) { %><%= draftCount %> 张待整理（补三问、标记解决）<% } else { %>没有待整理的卡<% } %>
-      · 自主解决率 <%= selfRate === null ? '—' : selfRate + '%' %>
+      · 本月自主解决率 <%= selfRate === null ? '—' : selfRate + '%' %>
     </p>
   </div>
   <div class="hero-actions">
@@ -36,7 +36,7 @@
   </div>
   <div class="metric">
     <span class="metric-num"><%= selfRate === null ? '—' : selfRate + '%' %></span>
-    <span class="metric-label">自主解决率</span>
+    <span class="metric-label">本月自主解决率</span>
   </div>
   <div class="metric">
     <span class="metric-num"><%= avgRecurrence %></span>
@@ -52,7 +52,7 @@
   </div>
   <ul class="cards">
     <% drafts.forEach(function (p) { %>
-      <li class="card card-draft">
+      <li class="card is-draft card-draft">
         <a class="card-main" href="/p/<%= p.id %>/edit">
           <span class="card-title"><%= p.title %></span>
           <span class="card-meta">
@@ -75,11 +75,14 @@
   </div>
 
   <% if (!recent.length) { %>
-    <p class="empty">还没有卡片。下次卡住的时候按 <kbd>N</kbd>，5 秒记一张。</p>
+    <div class="empty-state">
+      <p class="empty">还没有卡片。下次卡住的时候按 <kbd>N</kbd>，5 秒记一张。</p>
+      <button type="button" class="btn" data-open-capture>记第一个问题</button>
+    </div>
   <% } else { %>
     <ul class="cards">
       <% recent.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
-        <li class="card">
+        <li class="card is-<%= p.status %>">
           <a class="card-main" href="/p/<%= p.id %>">
             <span class="card-title"><%= p.title %></span>
             <span class="card-meta">

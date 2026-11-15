@@ -7,7 +7,7 @@
   <title><%= typeof title !== 'undefined' && title ? title + ' · 只问一次' : '只问一次' %></title>
   <link rel="stylesheet" href="/static/style.css?v=<%= typeof assetV === 'undefined' ? '' : assetV %>">
 </head>
-<body>
+<body class="<%= typeof bodyClass !== 'undefined' && bodyClass ? bodyClass : '' %>">
 <header class="topbar">
   <a class="brand" href="/">只问一次<span class="dot">.</span></a>
   <nav class="nav">
