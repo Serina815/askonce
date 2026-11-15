@@ -19,11 +19,12 @@
 ## 功能
 
 - **秒记**：按 `N` 弹浮层，回车保存；`Ctrl+V` 直接贴截图
-- **三问**：是什么 / 怎么解 / 为什么 / 人话版
+- **三问**：是什么 / 为什么 / 怎么做 / 人话版
+- **AI 参考**：让模型给一份独立答案用来对照，只写 `ai_*` 字段，**绝不覆盖你的三问**；可一键把空的字段补上
 - **尝试时间线**：AI 方案 A、文档、自己想的都留下，标注有效 / 部分 / 无效
 - **遮答案复盘**：先自己想，再看答案，自评三档 → 自动排到 1 / 3 / 7 / 21 / 45 天后
 - **复发追踪**：报错归一化 + 子串匹配，命中后掌握度 -1、复盘提前到今天
-- **自主解决率**：自己想的 / AI 给的，月度统计
+- **自主解决率**：自己想的 / AI 给的，本月与累计分开统计
 - **导出**：Markdown（Obsidian）、Anki CSV、JSON
 
 ## 本地跑起来
@@ -64,7 +65,9 @@ node bin/seed.js --user admin --reset   # 清空该用户的卡后重新灌
 | 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
 
-AI 只做一件事：把「问题 + 报错」变成三问草稿，而且**只填空字段，不覆盖你写的内容**。每次生成后它都会提醒你改写成自己的话。
+AI 只做一件事：针对「问题 + 报错 + 你已写的三问」，给一份 **是什么 / 为什么 / 怎么做** 的独立参考答案。
+
+关键在于它**不代写**：AI 的输出只进 `ai_what / ai_why / ai_how`，永远不会覆盖你写的 `q_*`。先自己想，再打开参考对照，最后愿意的话可以一键把空的字段补上——但那是你自己的选择。
 
 ## 部署到 CentOS Stream 9
 
@@ -90,6 +93,9 @@ mariadb-secure-installation
 mariadb -uroot -p -e "CREATE DATABASE askonce CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mariadb -uroot -p -e "CREATE USER 'askonce'@'127.0.0.1' IDENTIFIED BY '强密码'; GRANT SELECT,INSERT,UPDATE,DELETE ON askonce.* TO 'askonce'@'127.0.0.1';"
 mariadb -uroot -p askonce < sql/schema.sql
+
+# 2.1 从旧版本升级（已有数据才执行，只跑一次）
+mariadb -uroot -p askonce < sql/migrate-v1.1.sql
 
 # 3. 代码
 useradd -m -s /bin/bash askonce 2>/dev/null || true

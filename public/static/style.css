@@ -661,7 +661,10 @@ textarea { resize: vertical; }
 /* ---------- 复盘 ---------- */
 .review { max-width: 720px; margin: 0 auto; }
 
-.review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+.review-progress { height: 4px; margin: 0 0 18px; background: #e8dfcf; border-radius: 2px; overflow: hidden; }
+.review-progress i { display: block; height: 100%; background: var(--good); transition: width 0.3s ease; }
 
 .review-card {
   padding: 28px;

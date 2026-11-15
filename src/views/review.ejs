@@ -27,6 +27,15 @@
       <a class="linkbtn" href="/">今天先不复习</a>
     </div>
 
+    <%
+      var doneCount = Number(reviewedToday) || 0;
+      var todayTotal = doneCount + (Number(remaining) || 0);
+      var donePct = todayTotal ? Math.round((doneCount / todayTotal) * 100) : 0;
+    %>
+    <div class="review-progress" title="今天已复盘 <%= doneCount %> / <%= todayTotal %>">
+      <i style="width: <%= donePct %>%"></i>
+    </div>
+
     <article class="review-card">
       <h1><%= problem.title %></h1>
 

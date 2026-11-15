@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f3ea">
   <meta name="csrf-token" content="<%= csrfToken %>">
   <title><%= typeof title !== 'undefined' && title ? title + ' · 只问一次' : '只问一次' %></title>
+  <link rel="icon" href="/static/favicon.svg?v=<%= typeof assetV === 'undefined' ? '' : assetV %>" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css?v=<%= typeof assetV === 'undefined' ? '' : assetV %>">
 </head>
 <body class="<%= typeof bodyClass !== 'undefined' && bodyClass ? bodyClass : '' %>">
