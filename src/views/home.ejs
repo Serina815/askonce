@@ -13,75 +13,34 @@
   <div class="hero-main">
     <p class="kicker">全部</p>
     <h1><%= dueCount %> 张该复盘</h1>
-    <p class="hero-sub">
-      <% if (draftCount) { %><%= draftCount %> 张待整理（补三问、标记解决）<% } else { %>没有待整理的卡<% } %>
-      · 本月自主解决率 <%= selfRate === null ? '—' : selfRate + '%' %>
-    </p>
+    <p class="hero-sub">记录 → 补三问 → 复盘。数字都在「统计」里。</p>
   </div>
   <div class="hero-actions">
     <% if (dueCount) { %>
       <a class="btn big" href="/review">开始复盘 →</a>
-    <% } else if (draftCount) { %>
-      <a class="btn big ghost" href="/drafts">去整理 <%= draftCount %> 张 →</a>
     <% } else { %>
-      <a class="btn big ghost" href="/new">记一个问题</a>
+      <button type="button" class="btn big" data-open-capture>记一个问题</button>
     <% } %>
   </div>
 </section>
 
-<section class="metrics">
-  <div class="metric">
-    <span class="metric-num"><%= solvedThisMonth %></span>
-    <span class="metric-label">本月解决</span>
-  </div>
-  <div class="metric">
-    <span class="metric-num"><%= selfRate === null ? '—' : selfRate + '%' %></span>
-    <span class="metric-label">本月自主解决率</span>
-  </div>
-  <div class="metric">
-    <span class="metric-num"><%= avgRecurrence %></span>
-    <span class="metric-label">平均复发次数</span>
-  </div>
-</section>
-
-<% if (drafts.length) { %>
 <section class="panel">
   <div class="panel-head">
-    <h2>待整理 <span class="count"><%= draftCount %></span></h2>
-    <a class="linkbtn" href="/drafts">全部 →</a>
-  </div>
-  <ul class="cards">
-    <% drafts.forEach(function (p) { %>
-      <li class="card is-draft card-draft">
-        <a class="card-main" href="/p/<%= p.id %>/edit">
-          <span class="card-title"><%= p.title %></span>
-          <span class="card-meta">
-            <span class="chip draft">待整理</span>
-            <% if (p.tags) { %><span class="card-tags"><%= p.tags.split(',').join(' · ') %></span><% } %>
-            <span class="card-date">记于 <%= String(p.created_at).slice(0, 10) %></span>
-          </span>
-        </a>
-        <span class="card-side"><span class="card-cta">补三问 →</span></span>
-      </li>
-    <% }) %>
-  </ul>
-</section>
-<% } %>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>最近的卡</h2>
-    <a class="linkbtn" href="/new">记一个</a>
+    <h2>全部卡片 <span class="count"><%= cards.length %></span></h2>
+    <span class="panel-links">
+      <a class="linkbtn" href="/drafts">只看待整理</a>
+      <a class="linkbtn" href="/search">搜索 →</a>
+    </span>
   </div>
 
-  <% if (!recent.length) { %>
+  <% if (!cards.length) { %>
     <div class="empty-state">
       <p class="empty">还没有卡片。下次卡住的时候按 <kbd>N</kbd>，5 秒记一张。</p>
       <button type="button" class="btn" data-open-capture>记第一个问题</button>
     </div>
   <% } else { %>
     <ul class="cards">
-      <% recent.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
+      <% cards.forEach(function (p) { const s = STATUS[p.status] || STATUS.draft; %>
         <li class="card is-<%= p.status %>">
           <a class="card-main" href="/p/<%= p.id %>">
             <span class="card-title"><%= p.title %></span>
@@ -92,6 +51,7 @@
             </span>
           </a>
           <span class="card-side">
+            <% if (p.status === 'draft') { %><a class="card-cta" href="/p/<%= p.id %>/edit">补三问 →</a><% } %>
             <span class="dots" title="掌握度"><i class="<%= p.mastery >= 1 ? 'on' : '' %>"></i><i class="<%= p.mastery >= 2 ? 'on' : '' %>"></i><i class="<%= p.mastery >= 3 ? 'on' : '' %>"></i></span>
             <% if (p.next_review_on) { %><span class="card-date"><%= p.next_review_on %></span><% } %>
           </span>
@@ -100,20 +60,5 @@
     </ul>
   <% } %>
 </section>
-
-<% if (weakTags.length) { %>
-<section class="panel">
-  <div class="panel-head"><h2>薄弱区</h2><span class="hint">近 90 天复盘失败率</span></div>
-  <ul class="weak">
-    <% weakTags.forEach(function (t) { %>
-      <li>
-        <a href="/search?q=<%= encodeURIComponent(t.tag) %>">#<%= t.tag %></a>
-        <span class="weak-bar"><i style="width: <%= t.rate %>%"></i></span>
-        <span class="weak-num"><%= t.rate %>%</span>
-      </li>
-    <% }) %>
-  </ul>
-</section>
-<% } %>
 
 <%- include('partials/foot') %>

@@ -28,6 +28,14 @@ router.get(
          FROM problems WHERE status IN ('solved','mastered')`
     );
 
+    // 本月口径：首页原来的那些数字搬到这里
+    const month = await get(
+      `SELECT COUNT(*) AS solved, COALESCE(SUM(source = 'self'), 0) AS self_solved
+         FROM problems
+        WHERE status IN ('solved','mastered')
+          AND DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`
+    );
+
     const total = Number(solved.total) || 0;
     const selfSolved = Number(solved.self_solved) || 0;
 
@@ -99,6 +107,11 @@ router.get(
       selfRate: total ? Math.round((selfSolved / total) * 100) : null,
       total,
       selfSolved,
+      solvedThisMonth: Number(month.solved) || 0,
+      selfRateMonth: Number(month.solved)
+        ? Math.round((Number(month.self_solved) / Number(month.solved)) * 100)
+        : null,
+      totalCards: counts.draft + counts.solved + counts.mastered + counts.archived,
       avgRecurrence: solved.avg_recurrence === null ? 0 : Number(solved.avg_recurrence),
       totalRecurrence: Number(solved.total_recurrence) || 0,
       weeks,
